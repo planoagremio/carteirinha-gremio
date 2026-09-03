@@ -1,0 +1,383 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Carteirinha do Sócio</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
+<style>
+  *{box-sizing:border-box;}
+  html,body{margin:0;padding:0;}
+  body{
+    background:repeating-linear-gradient(135deg,rgba(255,255,255,0.025) 0 26px,rgba(0,0,0,0.05) 26px 52px),#001C4D;
+    font-family:'Segoe UI',Arial,sans-serif;
+    min-height:100vh;
+    display:flex; flex-direction:column; align-items:center; justify-content:center;
+    padding:24px 16px;
+  }
+  .brand{ text-align:center; margin-bottom:20px; }
+  .brand h1{ font-size:16px; font-weight:800; text-transform:uppercase; letter-spacing:.05em; margin:0; color:#fff; }
+  .brand p{ font-size:12px; color:#B9C2D6; margin:4px 0 0; }
+
+  /* ── Wrapper escalável ── */
+  .ticket-scale{
+    width:100%; max-width:600px; position:relative;
+  }
+
+  /* Carteirinha — imagem original como base */
+  .ticket{
+    width:600px; height:377px;
+    border-radius:14px; overflow:hidden; position:relative;
+    background:url('/assets/template-clean.jpg') no-repeat center center;
+    background-size:100% 100%;
+    box-shadow:0 16px 50px rgba(0,0,0,.75);
+    transform-origin:top left;
+  }
+  #tk-foto{
+    position:absolute; display:block;
+    left:31px; top:165.5px; width:129px; height:183.5px;
+    object-fit:cover; object-position:center top; border-radius:3px;
+    box-shadow:0 0 0 2px #1A56C4, 0 0 8px rgba(26,86,196,0.5);
+  }
+  #tk-foto:not([src]), #tk-foto[src=""]{display:none;}
+  #tk-foto[src="/assets/Gremio_logo.svg"]{ object-fit:contain; background:#001C4D; padding:10px; }
+  /* Ícones circulares dos campos */
+  .tk-icon{
+    position:absolute; left:175px;
+    width:26px; height:26px;
+    background:#1A56C4; border-radius:50%;
+    display:flex; align-items:center; justify-content:center;
+    box-shadow:0 1px 6px rgba(0,0,0,0.6);
+  }
+  #tk-icon1{ top:174px; }
+  #tk-icon2{ top:216px; }
+  #tk-icon3{ top:258px; }
+  #tk-icon4{ top:300px; }
+  .tk-icon svg{ width:14px; height:14px; fill:#fff; }
+  #tk-label1, #tk-label2, #tk-label3, #tk-label4{
+    position:absolute; left:209px; width:248px;
+    color:#7BB8E8; font-weight:700; font-size:9px;
+    font-family:'Segoe UI',Arial,sans-serif;
+    letter-spacing:0.05em; text-transform:uppercase;
+    white-space:nowrap;
+    text-shadow:0 0 6px #000, 0 0 4px #000, 0 1px 3px #000;
+  }
+  #tk-label1{ top:168px; }
+  #tk-label2{ top:210px; }
+  #tk-label3{ top:252px; }
+  #tk-label4{ top:295px; }
+  #tk-nome, #tk-desde, #tk-membro, #tk-doc{
+    position:absolute; left:209px; width:248px;
+    color:#fff; font-weight:700; font-size:13px;
+    font-family:'Segoe UI',Arial,sans-serif;
+    line-height:1.15; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;
+    text-shadow:0 0 8px #000, 0 0 5px #000, 1px 1px 3px #000;
+  }
+  #tk-nome  { top:182px; }
+  #tk-desde { top:223px; }
+  #tk-membro{ top:266px; }
+  #tk-doc   { top:309px; }
+  #tk-qrbox{ position:absolute; left:471px; top:146px; }
+  #tk-qrbox canvas, #tk-qrbox img{ display:block; width:88px!important; height:88px!important; }
+
+  /* ── QR grande ── */
+  .qr-grande{
+    margin-top:20px; background:#fff; padding:20px; border-radius:16px;
+    display:flex; flex-direction:column; align-items:center; gap:10px;
+    max-width:280px; width:100%;
+  }
+  .qr-grande p{ margin:0; font-size:12px; color:#444; text-align:center; font-weight:600; }
+
+  .btn-qr{
+    margin-top:16px; padding:12px 28px;
+    background:#1A56C4; color:#fff; border:none; border-radius:10px;
+    font-size:14px; font-weight:700; cursor:pointer; letter-spacing:.03em;
+  }
+  .btn-qr:hover{ background:#1445a0; }
+
+  .loading{ text-align:center; padding:40px; color:#B9C2D6; }
+  .erro{ text-align:center; padding:40px; color:#fff; }
+  .erro h2{ font-size:18px; margin:0 0 8px; }
+  .erro p{ font-size:13px; color:#B9C2D6; margin:0; }
+
+  .senha-box{
+    margin-top:24px; background:rgba(255,255,255,0.07); border-radius:14px;
+    padding:20px; width:100%; max-width:600px;
+  }
+  .senha-box h3{ margin:0 0 14px; font-size:14px; font-weight:700; color:#fff; text-transform:uppercase; letter-spacing:.04em; }
+  .senha-box input{
+    width:100%; padding:10px 12px; border-radius:8px; border:1px solid rgba(255,255,255,0.2);
+    background:rgba(255,255,255,0.1); color:#fff; font-size:14px; margin-bottom:10px;
+  }
+  .senha-box input::placeholder{ color:#8592AC; }
+  .senha-box input:focus{ outline:2px solid #1A56C4; outline-offset:1px; }
+  .senha-box button{
+    width:100%; padding:10px; border-radius:8px; border:none;
+    background:#1A56C4; color:#fff; font-weight:700; font-size:14px; cursor:pointer;
+  }
+  .senha-box button:disabled{ opacity:.5; cursor:not-allowed; }
+  .senha-msg{ font-size:13px; margin-top:8px; text-align:center; min-height:18px; }
+</style>
+</head>
+<body>
+
+<div class="brand">
+  <h1>Acesso do Sócio</h1>
+  <p>Carteirinha digital — Grêmio Plano A</p>
+</div>
+
+<div id="loading" class="loading">Carregando carteirinha...</div>
+<div id="erro" class="erro" style="display:none;">
+  <h2>Sócio não encontrado</h2>
+  <p>Verifique o link ou entre em contato com o clube.</p>
+</div>
+
+<div id="conteudo" style="display:none; width:100%; max-width:600px; flex-direction:column; align-items:center;">
+
+  <div class="ticket-scale" id="ticket-scale">
+  <div class="ticket" id="ticket">
+    <!-- Apenas campos variáveis — restante vem da imagem original -->
+    <img id="tk-foto" src="" alt="" onerror="this.removeAttribute('src')">
+    <!-- Ícones circulares -->
+    <div id="tk-icon1" class="tk-icon"><svg viewBox="0 0 24 24"><path d="M12,4A4,4 0 0,1 16,8A4,4 0 0,1 12,12A4,4 0 0,1 8,8A4,4 0 0,1 12,4M12,14C16.42,14 20,15.79 20,18V20H4V18C4,15.79 7.58,14 12,14Z"/></svg></div>
+    <div id="tk-icon2" class="tk-icon"><svg viewBox="0 0 24 24"><path d="M19,3H18V1H16V3H8V1H6V3H5C3.89,3 3,3.89 3,5V19A2,2 0 0,0 5,21H19A2,2 0 0,0 21,19V5C21,3.89 20.1,3 19,3M19,19H5V8H19V19M7,10H9V12H7V10M11,10H13V12H11V10M15,10H17V12H15V10M7,14H9V16H7V14M11,14H13V16H11V14Z"/></svg></div>
+    <div id="tk-icon3" class="tk-icon"><svg viewBox="0 0 24 24"><path d="M12,3A4,4 0 0,1 16,7A4,4 0 0,1 12,11A4,4 0 0,1 8,7A4,4 0 0,1 12,3M12,13C16.42,13 20,15.21 20,18V20H4V18C4,15.21 7.58,13 12,13M12,11.5L11,14L12,21L13,14L12,11.5Z"/></svg></div>
+    <div id="tk-icon4" class="tk-icon"><svg viewBox="0 0 24 24"><path d="M20,4H4A2,2 0 0,0 2,6V18A2,2 0 0,0 4,20H20A2,2 0 0,0 22,18V6A2,2 0 0,0 20,4M9,8A2,2 0 0,1 11,10A2,2 0 0,1 9,12A2,2 0 0,1 7,10A2,2 0 0,1 9,8M13,16H5V15C5,13.67 7.67,13 9,13C10.33,13 13,13.67 13,15V16M15,12V11H19V12H15M15,10V9H19V10H15M15,8V7H19V8H15Z"/></svg></div>
+    <!-- Etiquetas e valores -->
+    <div id="tk-label1">NOME DO ASSOCIADO:</div>
+    <div id="tk-label2">SÓCIO DO GPA DESDE:</div>
+    <div id="tk-label3">MEMBRO:</div>
+    <div id="tk-label4">N.º DE ASSOCIADO:</div>
+    <div id="tk-nome"></div>
+    <div id="tk-desde"></div>
+    <div id="tk-membro"></div>
+    <div id="tk-doc"></div>
+    <div id="tk-qrbox"></div>
+  </div><!-- /ticket -->
+  </div><!-- /ticket-scale -->
+
+  <button class="btn-qr" id="btn-mostrar-qr">Mostrar QR Code</button>
+
+  <div class="qr-grande" id="qr-grande" style="display:none;">
+    <div id="qr-grande-box"></div>
+    <p>Apresente este QR code na entrada do clube</p>
+  </div>
+
+  <div class="senha-box">
+    <h3>Alterar foto</h3>
+    <div style="display:flex;align-items:center;gap:14px;margin-bottom:12px;">
+      <img id="foto-preview" style="width:72px;height:72px;border-radius:50%;object-fit:cover;background:#1A56C4;border:2px solid rgba(255,255,255,0.2);" src="" onerror="this.style.visibility='hidden'">
+      <label style="display:inline-block;padding:10px 16px;background:rgba(255,255,255,0.15);border-radius:8px;color:#fff;font-size:13px;font-weight:700;cursor:pointer;">
+        Escolher foto
+        <input type="file" id="input-foto" accept="image/*" style="display:none;">
+      </label>
+    </div>
+    <button id="btn-salvar-foto" disabled>Salvar foto</button>
+    <div class="senha-msg" id="foto-msg"></div>
+  </div>
+
+  <div class="senha-box">
+    <h3>Alterar senha</h3>
+    <input type="password" id="senha-atual" placeholder="Senha atual">
+    <input type="password" id="senha-nova" placeholder="Nova senha (mín. 8 caracteres)">
+    <input type="password" id="senha-confirma" placeholder="Confirmar nova senha">
+    <button id="btn-trocar-senha">Salvar nova senha</button>
+    <div class="senha-msg" id="senha-msg"></div>
+  </div>
+</div>
+
+<script>
+(function(){
+  function formatarMesAno(isoStr){
+    if(!isoStr) return '—';
+    const d = new Date(isoStr);
+    const meses=['Janeiro','Fevereiro','Março','Abril','Maio','Junho','Julho','Agosto','Setembro','Outubro','Novembro','Dezembro'];
+    return meses[d.getMonth()] + ' de ' + d.getFullYear();
+  }
+
+  function escalarTicket(){
+    const scale = document.getElementById('ticket-scale');
+    const ticket = document.getElementById('ticket');
+    if(!scale || !ticket) return;
+    const ratio = Math.min(1, scale.offsetWidth / 600);
+    ticket.style.transform = 'scale(' + ratio + ')';
+    scale.style.height = Math.round(377 * ratio) + 'px';
+  }
+  window.addEventListener('resize', escalarTicket);
+
+  const username = location.pathname.split('/socio/')[1];
+  if(!username){ showErro(); return; }
+
+  // Verifica autenticação antes de carregar a carteirinha
+  fetch('/api/auth/me', { credentials: 'include' })
+    .then(r => {
+      if(!r.ok) {
+        // Não autenticado — redireciona para login
+        location.href = '/login-socio?redirect=' + encodeURIComponent(location.pathname);
+        return Promise.reject('redirect');
+      }
+      return r.json();
+    })
+    .then(me => {
+      // Sócio só pode ver a própria carteirinha
+      if(me.role === 'socio' && me.usuario !== username) {
+        location.href = '/socio/' + me.usuario;
+        return Promise.reject('redirect');
+      }
+      return fetch('/api/membros/publico/' + username, { credentials: 'include' });
+    })
+    .then(r => {
+      if(r.status === 401 || r.status === 403) {
+        location.href = '/login-socio?redirect=' + encodeURIComponent(location.pathname);
+        return Promise.reject('redirect');
+      }
+      return r.ok ? r.json() : Promise.reject(r.status);
+    })
+    .then(m => {
+      document.getElementById('loading').style.display = 'none';
+      const cont = document.getElementById('conteudo');
+      cont.style.display = 'flex';
+
+      document.getElementById('tk-foto').src = m.foto || '/assets/Gremio_logo.svg';
+      document.getElementById('tk-nome').textContent = m.nome;
+      document.getElementById('tk-desde').textContent = formatarMesAno(m.socio_gpa_desde || m.criado_em);
+      document.getElementById('tk-membro').textContent = 'ASSOCIADO';
+      document.getElementById('tk-doc').textContent = 'GPA ' + String(m.numero || 1).padStart(4, '0');
+
+      const qrText = location.origin + '/socio/' + m.username;
+
+      // QR pequeno na carteirinha
+      try {
+        const box = document.getElementById('tk-qrbox');
+        box.innerHTML = '';
+        new QRCode(box, { text: qrText, width: 88, height: 88, correctLevel: QRCode.CorrectLevel.M });
+      } catch(e) { console.warn('QR pequeno falhou:', e); }
+
+      // QR grande — gerado só quando clicar
+      let qrGrandeGerado = false;
+      document.getElementById('btn-mostrar-qr').addEventListener('click', function(){
+        const div = document.getElementById('qr-grande');
+        const btn = this;
+        if(div.style.display === 'none'){
+          div.style.display = 'flex';
+          btn.textContent = 'Ocultar QR Code';
+          if(!qrGrandeGerado){
+            try {
+              const box = document.getElementById('qr-grande-box');
+              box.innerHTML = '';
+              new QRCode(box, { text: qrText, width: 220, height: 220, correctLevel: QRCode.CorrectLevel.M });
+            } catch(e) { console.warn('QR grande falhou:', e); }
+            qrGrandeGerado = true;
+          }
+        } else {
+          div.style.display = 'none';
+          btn.textContent = 'Mostrar QR Code';
+        }
+      });
+
+      document.title = m.nome + ' — Carteirinha';
+      setTimeout(escalarTicket, 50);
+
+      // Troca de senha
+      document.getElementById('btn-trocar-senha').addEventListener('click', async function(){
+        const atual = document.getElementById('senha-atual').value;
+        const nova = document.getElementById('senha-nova').value;
+        const confirma = document.getElementById('senha-confirma').value;
+        const msg = document.getElementById('senha-msg');
+        msg.style.color = '#f88';
+        if(!atual || !nova || !confirma){ msg.textContent = 'Preencha todos os campos.'; return; }
+        if(nova !== confirma){ msg.textContent = 'As senhas não coincidem.'; return; }
+        if(nova.length < 8){ msg.textContent = 'Nova senha deve ter pelo menos 8 caracteres.'; return; }
+        this.disabled = true;
+        try {
+          const res = await fetch('/api/auth/trocar-senha', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            credentials: 'include',
+            body: JSON.stringify({ senha_atual: atual, nova_senha: nova }),
+          });
+          const data = await res.json();
+          if(res.ok){
+            msg.style.color = '#6fdc9f';
+            msg.textContent = 'Senha alterada com sucesso!';
+            document.getElementById('senha-atual').value = '';
+            document.getElementById('senha-nova').value = '';
+            document.getElementById('senha-confirma').value = '';
+          } else {
+            msg.textContent = data.detail || 'Erro ao trocar senha.';
+          }
+        } catch(e) {
+          msg.textContent = 'Erro de conexão.';
+        }
+        this.disabled = false;
+      });
+
+      // Troca de foto
+      let pendingFoto = '';
+      const inputFoto = document.getElementById('input-foto');
+      const fotoPreview = document.getElementById('foto-preview');
+      const btnSalvarFoto = document.getElementById('btn-salvar-foto');
+      fotoPreview.src = m.foto || '/assets/Gremio_logo.svg';
+
+      inputFoto.addEventListener('change', function(){
+        const file = this.files[0];
+        if(!file) return;
+        const reader = new FileReader();
+        reader.onload = function(ev){
+          const img = new Image();
+          img.onload = function(){
+            const canvas = document.createElement('canvas');
+            const max = 600;
+            let w = img.width, h = img.height;
+            if(w > max || h > max){ const r = Math.min(max/w, max/h); w = Math.round(w*r); h = Math.round(h*r); }
+            canvas.width = w; canvas.height = h;
+            canvas.getContext('2d').drawImage(img, 0, 0, w, h);
+            pendingFoto = canvas.toDataURL('image/jpeg', 0.82);
+            fotoPreview.src = pendingFoto;
+            fotoPreview.style.visibility = 'visible';
+            btnSalvarFoto.disabled = false;
+          };
+          img.src = ev.target.result;
+        };
+        reader.readAsDataURL(file);
+      });
+
+      btnSalvarFoto.addEventListener('click', async function(){
+        const msg = document.getElementById('foto-msg');
+        msg.style.color = '#f88';
+        if(!pendingFoto){ msg.textContent = 'Escolha uma foto primeiro.'; return; }
+        this.disabled = true;
+        try {
+          const res = await fetch('/api/membros/minha-foto', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            credentials: 'include',
+            body: JSON.stringify({ foto: pendingFoto }),
+          });
+          const data = await res.json();
+          if(res.ok){
+            msg.style.color = '#6fdc9f';
+            msg.textContent = 'Foto atualizada!';
+            document.getElementById('tk-foto').src = pendingFoto;
+            pendingFoto = '';
+            btnSalvarFoto.disabled = true;
+          } else {
+            msg.textContent = data.detail || 'Erro ao salvar foto.';
+            this.disabled = false;
+          }
+        } catch(e) {
+          msg.textContent = 'Erro de conexão.';
+          this.disabled = false;
+        }
+      });
+    })
+    .catch(err => { if(err !== 'redirect') showErro(); });
+
+  function showErro(){
+    document.getElementById('loading').style.display = 'none';
+    document.getElementById('erro').style.display = 'block';
+  }
+})();
+</script>
+</body>
+</html>

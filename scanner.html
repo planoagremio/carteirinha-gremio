@@ -1,0 +1,328 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Scanner — Grêmio Plano A</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jsQR/1.4.0/jsQR.js"></script>
+<style>
+  *{box-sizing:border-box;margin:0;padding:0;}
+  body{
+    background:#001C4D; font-family:'Segoe UI',Arial,sans-serif;
+    min-height:100vh; display:flex; flex-direction:column; align-items:center;
+    color:#fff;
+  }
+  header{
+    width:100%; background:#001C4D; padding:14px 16px;
+    display:flex; align-items:center; justify-content:space-between;
+    border-bottom:1px solid rgba(255,255,255,0.1);
+  }
+  header h1{ font-size:15px; font-weight:800; text-transform:uppercase; letter-spacing:.05em; }
+  header span{ font-size:12px; color:#B9C2D6; }
+
+  .cam-wrap{
+    width:100%; max-width:480px; position:relative;
+    margin-top:0;
+  }
+  video{ width:100%; display:block; background:#000; min-height:240px; }
+  canvas{ display:none; }
+
+  .overlay{
+    position:absolute; inset:0; display:flex; align-items:center; justify-content:center; pointer-events:none;
+  }
+  .mira{
+    width:200px; height:200px; border:3px solid #1A56C4;
+    border-radius:12px; box-shadow:0 0 0 4000px rgba(0,0,0,0.45);
+  }
+
+  .status{
+    padding:12px 16px; font-size:13px; color:#B9C2D6; text-align:center;
+    min-height:44px; line-height:1.5;
+  }
+
+  .btn-cam{
+    display:none;
+    margin:8px auto 0;
+    padding:12px 28px; background:#1A56C4; color:#fff;
+    border:none; border-radius:10px; font-size:15px; font-weight:700;
+    cursor:pointer; letter-spacing:.03em;
+  }
+  .btn-cam:hover{ background:#1445a0; }
+
+  /* Resultado */
+  .resultado{
+    width:100%; max-width:480px; padding:0 16px; margin-top:8px;
+    display:none;
+  }
+  .resultado.show{ display:block; }
+  .resultado-card{
+    border-radius:14px; padding:20px; display:flex; gap:16px; align-items:center;
+  }
+  .resultado-card.ok   { background:#1A4D35; border:2px solid #2F9E64; }
+  .resultado-card.warn { background:#4D3A10; border:2px solid #C9963A; }
+  .resultado-card.err  { background:#4D1A1A; border:2px solid #C0392B; }
+
+  .resultado-foto{
+    width:64px; height:64px; border-radius:8px;
+    object-fit:cover; object-position:top; flex-shrink:0;
+    background:#002266;
+  }
+  .resultado-info{ flex:1; min-width:0; }
+  .resultado-nome{ font-size:17px; font-weight:800; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+  .resultado-sub { font-size:13px; color:#ccc; margin-top:4px; }
+  .resultado-status{ font-size:14px; font-weight:700; margin-top:8px; }
+  .ok   .resultado-status{ color:#2F9E64; }
+  .warn .resultado-status{ color:#C9963A; }
+  .err  .resultado-status{ color:#C0392B; }
+
+  .resultado-icon{ font-size:32px; flex-shrink:0; }
+</style>
+</head>
+<body>
+
+<header>
+  <h1>Scanner de Entrada</h1>
+  <div style="display:flex;gap:8px;align-items:center;">
+    <span id="lbl-usuario" style="font-size:12px;color:#B9C2D6;"></span>
+    <a href="/" style="padding:6px 10px;background:#1A56C4;color:#fff;border-radius:7px;font-size:12px;font-weight:700;text-decoration:none;">&#9776; Painel</a>
+  </div>
+</header>
+
+<div class="cam-wrap">
+  <video id="video" autoplay playsinline muted></video>
+  <canvas id="canvas"></canvas>
+  <div class="overlay"><div class="mira"></div></div>
+</div>
+
+<p class="status" id="status">Verificando autenticação...</p>
+<button class="btn-cam" id="btn-cam" onclick="tentarCamera()">Iniciar Câmera</button>
+
+<div class="resultado" id="resultado">
+  <div class="resultado-card" id="resultado-card">
+    <span class="resultado-icon" id="resultado-icon"></span>
+    <img class="resultado-foto" id="resultado-foto" src="" alt="">
+    <div class="resultado-info">
+      <div class="resultado-nome" id="resultado-nome"></div>
+      <div class="resultado-sub"  id="resultado-sub"></div>
+      <div class="resultado-status" id="resultado-status"></div>
+    </div>
+  </div>
+</div>
+
+<script>
+(function(){
+  var members = [];
+  var lastRaw = null;
+  var lastAt  = 0;
+  var scanning = false;
+  var scanBusy = false;
+
+  // Headers que contornam o aviso de interstitial do ngrok
+  var fetchOpts = {
+    credentials: 'include',
+    headers: { 'ngrok-skip-browser-warning': '1' }
+  };
+
+  function setStatus(msg){ document.getElementById('status').textContent = msg; }
+
+  // Verifica auth
+  fetch('/api/auth/me', fetchOpts)
+    .then(function(r){ return r.ok ? r.json() : null; })
+    .then(function(me){
+      if(!me){
+        setStatus('Não autenticado. Redirecionando...');
+        location.href = '/login-socio?redirect=/scanner';
+        return;
+      }
+      if(me.role === 'socio'){
+        location.href = '/socio/' + me.usuario;
+        return;
+      }
+      document.getElementById('lbl-usuario').textContent = me.usuario;
+      setStatus('Autenticado. Carregando câmera...');
+      iniciar();
+    })
+    .catch(function(err){
+      setStatus('Erro de conexão: ' + err + '. Toque em "Iniciar Câmera".');
+      document.getElementById('btn-cam').style.display = 'block';
+    });
+
+  function iniciar(){
+    // Carrega lista de sócios
+    fetch('/api/membros/', fetchOpts)
+      .then(function(r){ return r.ok ? r.json() : []; })
+      .then(function(data){ members = data; })
+      .catch(function(){});
+
+    tentarCamera();
+  }
+
+  window.tentarCamera = function(){
+    document.getElementById('btn-cam').style.display = 'none';
+    setStatus('Solicitando acesso à câmera...');
+
+    if(!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia){
+      setStatus('Este navegador não suporta câmera. Use Chrome ou Safari.');
+      document.getElementById('btn-cam').style.display = 'block';
+      return;
+    }
+
+    // Tenta câmera traseira primeiro
+    navigator.mediaDevices.getUserMedia({ video: { facingMode: { ideal: 'environment' } } })
+      .then(function(stream){
+        var video = document.getElementById('video');
+        video.srcObject = stream;
+        return video.play();
+      })
+      .then(function(){
+        setStatus('Aponte para o QR code da carteirinha');
+        scanning = true;
+        requestAnimationFrame(scanLoop);
+      })
+      .catch(function(err){
+        var msg = 'Câmera indisponível';
+        if(err.name === 'NotAllowedError' || err.name === 'PermissionDeniedError'){
+          msg = 'Permissão de câmera negada. Permita o acesso nas configurações do navegador e toque em "Iniciar Câmera".';
+        } else if(err.name === 'NotFoundError'){
+          msg = 'Nenhuma câmera encontrada neste dispositivo.';
+        } else if(err.name === 'NotReadableError'){
+          msg = 'Câmera em uso por outro app. Feche outros apps e toque em "Iniciar Câmera".';
+        } else {
+          msg = 'Erro ao acessar câmera: ' + err.name + '. Toque em "Iniciar Câmera".';
+        }
+        setStatus(msg);
+        document.getElementById('btn-cam').style.display = 'block';
+        document.getElementById('btn-cam').textContent = 'Tentar novamente';
+      });
+  };
+
+  function todayStr(){
+    var d = new Date();
+    return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0');
+  }
+  function timeStr(){
+    var d = new Date();
+    return String(d.getHours()).padStart(2,'0')+':'+String(d.getMinutes()).padStart(2,'0');
+  }
+  function extrairUsername(raw){
+    try {
+      var url = new URL(raw);
+      var m = url.pathname.match(/\/socio\/([^\/]+)/);
+      if(m) return m[1];
+    } catch(e){}
+    return raw;
+  }
+
+  function scanLoop(){
+    if(!scanning) return;
+    var video = document.getElementById('video');
+    if(!scanBusy && video.readyState === video.HAVE_ENOUGH_DATA){
+      scanBusy = true;
+      (function(){
+        if('BarcodeDetector' in window){
+          var det = new BarcodeDetector({ formats: ['qr_code'] });
+          det.detect(video)
+            .then(function(codes){
+              if(codes.length > 0) return handleScan(codes[0].rawValue);
+            })
+            .catch(function(){})
+            .finally(function(){ scanBusy = false; if(scanning) requestAnimationFrame(scanLoop); });
+          return;
+        }
+        // Fallback jsQR
+        var canvas = document.getElementById('canvas');
+        canvas.width = video.videoWidth; canvas.height = video.videoHeight;
+        var ctx = canvas.getContext('2d');
+        ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
+        var imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
+        var code = jsQR(imageData.data, imageData.width, imageData.height);
+        if(code && code.data){
+          handleScan(code.data).finally(function(){ scanBusy = false; if(scanning) requestAnimationFrame(scanLoop); });
+        } else {
+          scanBusy = false;
+          if(scanning) requestAnimationFrame(scanLoop);
+        }
+      })();
+    } else {
+      if(scanning) requestAnimationFrame(scanLoop);
+    }
+  }
+
+  function handleScan(raw){
+    var now = Date.now();
+    if(raw === lastRaw && (now - lastAt) < 5000) return Promise.resolve();
+    lastRaw = raw; lastAt = now;
+
+    var username = extrairUsername(raw);
+    var m = members.find(function(x){ return x.username === username || x.id === username; });
+
+    if(!m){
+      showResult('err', null, 'QR não reconhecido', 'Sócio não encontrado: ' + username, '✕');
+      return Promise.resolve();
+    }
+
+    setStatus('Registrando entrada...');
+
+    return fetch('/api/checkins/', {
+      method: 'POST',
+      credentials: 'include',
+      headers: { 'Content-Type': 'application/json', 'ngrok-skip-browser-warning': '1' },
+      body: JSON.stringify({
+        membro_id: m.id,
+        date: todayStr(),
+        time: timeStr(),
+        ts: new Date().toISOString(),
+      }),
+    })
+    .then(function(res){
+      if(res.status === 409){
+        showResult('warn', m, 'Já registrado hoje', 'Presença já foi registrada anteriormente.', '!');
+        return;
+      }
+      if(!res.ok){
+        showResult('err', m, 'Erro ao registrar', 'Status: ' + res.status, '✕');
+        return;
+      }
+      return res.json().then(function(entry){
+        showResult('ok', m, 'Entrada liberada', 'Registrado às ' + entry.time + '.', '✓');
+      });
+    })
+    .catch(function(err){
+      showResult('err', m, 'Erro de rede', String(err), '✕');
+    });
+  }
+
+  function showResult(kind, m, titulo, sub, icon){
+    beep(kind === 'ok');
+    var card = document.getElementById('resultado-card');
+    var div  = document.getElementById('resultado');
+    card.className = 'resultado-card ' + kind;
+    document.getElementById('resultado-icon').textContent = icon;
+    document.getElementById('resultado-nome').textContent = m ? m.nome : '—';
+    document.getElementById('resultado-sub').textContent  = sub;
+    document.getElementById('resultado-status').textContent = titulo;
+    var foto = document.getElementById('resultado-foto');
+    foto.src = (m && m.foto) ? m.foto : '/assets/Gremio_logo.svg';
+    div.classList.add('show');
+    setStatus('Aponte para o próximo QR code');
+    setTimeout(function(){ div.classList.remove('show'); }, 4000);
+  }
+
+  function beep(ok){
+    try {
+      var ctx = new (window.AudioContext || window.webkitAudioContext)();
+      var osc = ctx.createOscillator();
+      var gain = ctx.createGain();
+      osc.connect(gain); gain.connect(ctx.destination);
+      osc.frequency.value = ok ? 1046 : 330;
+      osc.type = ok ? 'sine' : 'sawtooth';
+      gain.gain.setValueAtTime(0.3, ctx.currentTime);
+      gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 0.4);
+      osc.start(ctx.currentTime);
+      osc.stop(ctx.currentTime + 0.4);
+    } catch(e){}
+  }
+})();
+</script>
+</body>
+</html>

@@ -1,0 +1,1175 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Acesso do Sócio</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jsQR/1.4.0/jsQR.js"></script>
+<style>
+  :root{
+    --navy:#001C4D;
+    --navy-2:#00133A;
+    --paper:#F5F5F6;
+    --blue:#0044CC;
+    --gold:#FFFFFF;
+    --black:#0B0B0C;
+    --ink:#141519;
+    --muted:#666B75;
+    --line:#D9DADD;
+    --ok:#2F9E64;
+    --warn:#B4801E;
+    --danger:#C0392B;
+    --radius:14px;
+  }
+  *{box-sizing:border-box;}
+  html,body{margin:0;padding:0;}
+  body{
+    background:
+      repeating-linear-gradient(135deg, rgba(255,255,255,0.025) 0 26px, rgba(0,0,0,0.05) 26px 52px),
+      var(--navy);
+    color:var(--paper);
+    font-family:'Segoe UI',-apple-system,BlinkMacSystemFont,Helvetica,Arial,sans-serif;
+    min-height:100vh;
+  }
+  .display{
+    font-family:'Arial Narrow',Impact,'Segoe UI',sans-serif;
+    font-weight:800;
+    letter-spacing:0.02em;
+    text-transform:uppercase;
+  }
+  .mono{ font-family:'Consolas','SFMono-Regular',Menlo,monospace; letter-spacing:0.02em; }
+
+  .app{ max-width:920px; margin:0 auto; padding:22px 16px 60px; }
+
+  .masthead{
+    display:flex; align-items:center; justify-content:space-between;
+    padding-bottom:16px; margin-bottom:18px;
+    border-bottom:2px solid rgba(244,241,232,0.15);
+  }
+  .masthead .brand{ display:flex; align-items:center; gap:12px; }
+  .crest{
+    width:42px;height:42px;border-radius:50%;
+    background:linear-gradient(180deg, var(--blue) 0%, var(--blue) 33%, var(--black) 33%, var(--black) 66%, #fff 66%, #fff 100%);
+    border:2px solid var(--paper);
+    flex:none;
+    box-shadow:0 0 0 1px var(--black);
+  }
+  .brand h1{ font-size:20px; margin:0; }
+  .brand p{ margin:2px 0 0; font-size:12px; color:#B9C2D6; }
+
+  .tabs{
+    display:flex; gap:6px; margin-bottom:20px;
+    overflow-x:auto; -webkit-overflow-scrolling:touch;
+    scrollbar-width:none; padding-bottom:4px;
+  }
+  .tabs::-webkit-scrollbar{ display:none; }
+  .tab{
+    padding:9px 14px; border-radius:999px; border:1px solid rgba(244,241,232,0.25);
+    background:transparent; color:var(--paper); font-size:13px; cursor:pointer;
+    font-weight:600; white-space:nowrap; flex-shrink:0;
+  }
+  .tab.active{ background:var(--gold); color:var(--navy); border-color:var(--gold); }
+
+  .panel{ display:none; animation:fade .18s ease; }
+  .panel.active{ display:block; }
+  @keyframes fade{ from{opacity:0; transform:translateY(4px);} to{opacity:1; transform:translateY(0);} }
+
+  .card{
+    background:var(--paper); color:var(--ink); border-radius:var(--radius);
+    padding:20px; margin-bottom:16px;
+  }
+  .card h2{ margin:0 0 4px; font-size:15px; text-transform:uppercase; letter-spacing:.04em; color:var(--navy-2); }
+  .card .hint{ font-size:12.5px; color:var(--muted); margin:0 0 16px; }
+
+  label{ display:block; font-size:12px; font-weight:700; color:var(--navy-2); margin:12px 0 5px; text-transform:uppercase; letter-spacing:.03em; }
+  input[type=text], input[type=date], input[type=password]{
+    width:100%; padding:10px 12px; border-radius:8px; border:1px solid var(--line);
+    font-size:14px; background:#fff; color:var(--ink);
+  }
+  input:focus{ outline:2px solid var(--blue); outline-offset:1px; }
+
+  .photo-row{ display:flex; gap:14px; align-items:center; margin-top:8px; }
+  .photo-preview{
+    width:64px;height:64px;border-radius:50%; object-fit:cover; background:#e6e2d4;
+    border:2px solid var(--line); flex:none;
+  }
+  .filebtn{
+    display:inline-block; padding:9px 14px; border-radius:8px; background:var(--navy);
+    color:var(--paper); font-size:13px; cursor:pointer; font-weight:600;
+  }
+  .filebtn input{ display:none; }
+
+  .btn{
+    padding:10px 18px; border-radius:8px; border:none; background:var(--blue); color:#fff;
+    font-weight:700; font-size:13.5px; cursor:pointer; text-transform:uppercase; letter-spacing:.03em;
+  }
+  .btn.gold{ background:var(--gold); color:var(--navy); }
+  .btn.danger{ background:var(--danger); color:#fff; }
+  .btn.ghost{ background:transparent; color:var(--navy-2); border:1px solid var(--line); }
+  .btn:disabled{ opacity:.5; cursor:not-allowed; }
+  .btn-row{ display:flex; gap:10px; margin-top:16px; flex-wrap:wrap; }
+
+  .member-list{ margin-top:18px; display:flex; flex-direction:column; gap:8px; }
+  .member-row{
+    display:flex; align-items:center; gap:12px; padding:10px 12px; border:1px solid var(--line);
+    border-radius:10px; background:#fff;
+  }
+  .member-row img{ width:40px;height:40px;border-radius:50%; object-fit:cover; background:#e6e2d4; flex:none; }
+  .member-row .info{ flex:1; min-width:0; }
+  .member-row .info b{ display:block; font-size:14px; }
+  .member-row .info span{ font-size:12px; color:var(--muted); }
+  .member-row button{ background:none; border:none; color:var(--danger); font-size:12px; cursor:pointer; font-weight:700; }
+
+  .empty{ text-align:center; padding:30px 10px; color:var(--muted); font-size:13.5px; }
+
+  .picker{ display:flex; gap:10px; align-items:center; flex-wrap:wrap; margin-bottom:6px; }
+  select{ padding:10px 12px; border-radius:8px; border:1px solid var(--line); font-size:14px; flex:1; min-width:180px; background:#fff; }
+
+  /* ═══════════════════════════════════════════
+     CARTEIRINHA — imagem original como base
+     Apenas campos variáveis posicionados em cima
+  ═══════════════════════════════════════════ */
+  .ticket-wrap{ display:flex; justify-content:center; margin-top:18px; }
+  .ticket-scale{ width:100%; max-width:600px; }
+  .ticket{
+    width:600px; height:377px;
+    border-radius:14px; overflow:hidden; position:relative;
+    background:url('/assets/template-clean.jpg') no-repeat center center;
+    background-size:100% 100%;
+    box-shadow:0 16px 50px rgba(0,0,0,.75);
+    transform-origin:top left;
+  }
+  /* Foto sobre o template */
+  #tk-photo{
+    position:absolute; display:block;
+    left:31px; top:165.5px; width:129px; height:183.5px;
+    object-fit:cover; object-position:center top; border-radius:3px;
+    box-shadow:0 0 0 2px #1A56C4, 0 0 8px rgba(26,86,196,0.5);
+  }
+  #tk-photo:not([src]), #tk-photo[src=""]{display:none;}
+  #tk-photo[src="/assets/Gremio_logo.svg"]{ object-fit:contain; background:#001C4D; padding:10px; }
+  /* Ícones circulares dos campos */
+  .tk-icon{
+    position:absolute; left:175px;
+    width:26px; height:26px;
+    background:#1A56C4; border-radius:50%;
+    display:flex; align-items:center; justify-content:center;
+    box-shadow:0 1px 6px rgba(0,0,0,0.6);
+  }
+  #tk-icon1{ top:174px; }
+  #tk-icon2{ top:216px; }
+  #tk-icon3{ top:258px; }
+  #tk-icon4{ top:300px; }
+  .tk-icon svg{ width:14px; height:14px; fill:#fff; }
+  /* Etiquetas dos campos */
+  #tk-label1, #tk-label2, #tk-label3, #tk-label4{
+    position:absolute; left:209px; width:248px;
+    color:#7BB8E8; font-weight:700; font-size:9px;
+    font-family:'Segoe UI',Arial,sans-serif;
+    letter-spacing:0.05em; text-transform:uppercase;
+    white-space:nowrap;
+    text-shadow:0 0 6px #000, 0 0 4px #000, 0 1px 3px #000;
+  }
+  #tk-label1{ top:168px; }
+  #tk-label2{ top:210px; }
+  #tk-label3{ top:252px; }
+  #tk-label4{ top:295px; }
+  /* Valores dos campos */
+  #tk-nome, #tk-desde, #tk-membro, #tk-doc{
+    position:absolute; left:209px; width:248px;
+    color:#fff; font-weight:700; font-size:13px;
+    font-family:'Segoe UI',Arial,sans-serif;
+    line-height:1.15; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;
+    text-shadow:0 0 8px #000, 0 0 5px #000, 1px 1px 3px #000;
+  }
+  #tk-nome  { top:182px; }
+  #tk-desde { top:223px; }
+  #tk-membro{ top:266px; }
+  #tk-doc   { top:309px; }
+  /* QR code */
+  #tk-qrbox{ position:absolute; left:471px; top:146px; }
+  #tk-qrbox canvas, #tk-qrbox img{ display:block; width:88px!important; height:88px!important; }
+
+  .scan-stage{ position:relative; border-radius:12px; overflow:hidden; background:#000; aspect-ratio:4/3; max-width:480px; margin:0 auto; }
+  .scan-stage video{ width:100%; height:100%; object-fit:cover; display:block; }
+  .scan-frame{
+    position:absolute; inset:14%; border:3px solid var(--gold); border-radius:12px;
+    box-shadow:0 0 0 999px rgba(0,0,0,0.35);
+  }
+  .scan-status{ text-align:center; font-size:13px; color:#B9C2D6; margin-top:10px; }
+
+  .result-banner{
+    margin-top:16px; padding:16px; border-radius:12px; display:flex; gap:14px; align-items:center;
+  }
+  .result-banner.ok{ background:#E4F5EC; }
+  .result-banner.warn{ background:#FBF0DA; }
+  .result-banner.err{ background:#FAE4E1; }
+  .result-banner img{ width:52px;height:52px;border-radius:50%; object-fit:cover; background:#ddd; }
+  .result-banner .rb-info b{ display:block; font-size:15px; color:var(--ink); }
+  .result-banner .rb-info span{ font-size:12.5px; color:var(--muted); }
+
+  table{ width:100%; border-collapse:collapse; margin-top:12px; }
+  th,td{ text-align:left; padding:9px 8px; font-size:13px; border-bottom:1px solid var(--line); }
+  th{ text-transform:uppercase; font-size:10.5px; color:var(--muted); letter-spacing:.04em; }
+  .stat{ display:inline-block; background:var(--navy); color:var(--paper); padding:8px 14px; border-radius:10px; font-size:13px; margin-bottom:10px; }
+  .toast{
+    position:fixed; bottom:18px; left:50%; transform:translateX(-50%);
+    background:var(--navy-2); color:var(--paper); padding:10px 18px; border-radius:999px;
+    font-size:13px; box-shadow:0 6px 20px rgba(0,0,0,.4); z-index:50; opacity:0; transition:opacity .2s;
+  }
+  .toast.show{ opacity:1; }
+  .footer-reset{ text-align:center; margin-top:24px; display:flex; gap:16px; justify-content:center; flex-wrap:wrap; }
+  .footer-reset button{ background:none; border:none; color:#8592AC; font-size:11.5px; cursor:pointer; text-decoration:underline; }
+
+  .lock-btn{
+    background:none; border:1px solid rgba(244,241,232,0.25); color:var(--paper);
+    border-radius:999px; padding:8px 14px; font-size:12px; cursor:pointer; font-weight:600;
+  }
+
+  .club-logo{ width:100%; height:100%; object-fit:contain; display:none; }
+  .crest{ position:relative; overflow:hidden; }
+
+  #auth-screen{
+    position:fixed; inset:0; background:var(--navy); display:flex; align-items:center; justify-content:center;
+    padding:20px; z-index:100;
+  }
+  .auth-card{
+    background:var(--paper); color:var(--ink); border-radius:16px; padding:28px 26px; width:100%; max-width:340px;
+    box-shadow:0 20px 50px rgba(0,0,0,.45);
+  }
+  .auth-card .lock-icon{
+    width:44px;height:44px;border-radius:50%; background:var(--navy); color:var(--gold);
+    display:flex; align-items:center; justify-content:center; font-size:20px; margin-bottom:14px;
+  }
+  .auth-card h2{ margin:0 0 4px; font-size:16px; text-transform:uppercase; letter-spacing:.03em; color:var(--navy-2); }
+  .auth-card p{ margin:0 0 16px; font-size:12.5px; color:var(--muted); }
+  .auth-card input[type=password]{
+    width:100%; padding:10px 12px; border-radius:8px; border:1px solid var(--line); font-size:14px;
+    background:#fff; color:var(--ink); margin-bottom:10px;
+  }
+  .auth-card .btn{ width:100%; }
+  .auth-error{ color:var(--danger); font-size:12.5px; margin:-4px 0 10px; min-height:1em; }
+
+  .api-config{ background:#f0f4ff; border:1px solid #c7d5f5; border-radius:8px; padding:14px; margin-bottom:16px; font-size:13px; color:#2a3a6e; }
+  .api-config b{ display:block; margin-bottom:6px; }
+  .api-config input{ font-size:13px; }
+</style>
+</head>
+<body>
+
+<div id="auth-screen">
+  <div class="auth-card">
+    <div class="lock-icon">&#128274;</div>
+    <h2>Acesso do clube</h2>
+    <input type="text" id="login-user" placeholder="Usuário" style="margin-bottom:8px;">
+    <input type="password" id="login-pass" placeholder="Senha">
+    <div class="auth-error" id="login-error"></div>
+    <button class="btn gold" id="btn-login" style="margin-top:8px;">Entrar</button>
+    <span id="api-url-display" style="display:none;"></span>
+    <button id="btn-change-api" style="display:none;"></button>
+  </div>
+</div>
+
+<div class="app" id="main-app" style="display:none;">
+
+  <div class="masthead">
+    <div class="brand">
+      <div class="crest">
+        <img class="club-logo" id="header-logo" alt="Escudo do clube">
+      </div>
+      <div>
+        <h1 class="display">Acesso do Sócio</h1>
+        <p>Controle de entrada por carteirinha digital</p>
+      </div>
+    </div>
+    <button class="lock-btn" id="btn-lock">&#128274; Sair</button>
+  </div>
+
+  <div class="tabs">
+    <button class="tab active" data-tab="cadastro">Cadastro</button>
+    <button class="tab" data-tab="carteirinha">Carteirinha</button>
+    <button class="tab" data-tab="leitor">Leitor</button>
+    <button class="tab" data-tab="presenca">Presença</button>
+    <a href="/scanner" class="tab" style="text-decoration:none;">&#128247; Scanner</a>
+  </div>
+
+  <!-- CADASTRO -->
+  <div class="panel active" id="panel-cadastro">
+    <div class="card">
+      <h2>Novo sócio</h2>
+      <p class="hint">Preencha os dados e a foto. Depois de salvo, a carteirinha com QR code fica disponível na aba "Carteirinha".</p>
+
+      <label for="f-username">Username (único por sócio)</label>
+      <input type="text" id="f-username" placeholder="Ex.: joaosilva" style="text-transform:lowercase;">
+      <div id="username-hint" style="font-size:11.5px;color:var(--muted);margin-top:3px;">Somente letras, números, . _ - (mín. 3 caracteres). URL gerada: <span id="url-preview" style="font-family:monospace;color:var(--blue);"></span></div>
+
+      <label for="f-nome">Nome completo</label>
+      <input type="text" id="f-nome" placeholder="Ex.: João da Silva">
+
+      <label for="f-doc">CPF ou documento (opcional)</label>
+      <input type="text" id="f-doc" placeholder="Ex.: 000.000.000-00">
+
+      <label>Foto</label>
+      <div class="photo-row">
+        <img id="f-preview" class="photo-preview" src="" alt="">
+        <label class="filebtn">Escolher foto
+          <input type="file" id="f-foto" accept="image/*">
+        </label>
+      </div>
+
+      <div class="btn-row">
+        <button class="btn gold" id="btn-add-member">Salvar sócio</button>
+      </div>
+    </div>
+
+    <div class="card">
+      <h2>Sócios cadastrados</h2>
+      <p class="hint" id="member-count-hint">Carregando...</p>
+      <div class="member-list" id="member-list"></div>
+    </div>
+  </div>
+
+  <!-- CARTEIRINHA -->
+  <div class="panel" id="panel-carteirinha">
+    <div class="card">
+      <h2>Carteirinha digital</h2>
+      <p class="hint">Escolha um sócio para ver e baixar a carteirinha com QR code.</p>
+      <div class="picker">
+        <select id="sel-member"><option value="">Selecione um sócio...</option></select>
+      </div>
+      <div class="ticket-wrap" id="ticket-wrap" style="display:none;">
+        <div class="ticket-scale" id="ticket-scale">
+        <div class="ticket" id="ticket">
+          <!-- Apenas campos variáveis — o restante vem da imagem original -->
+          <img id="tk-photo" src="" alt="" onerror="this.removeAttribute('src')">
+          <!-- Ícones circulares -->
+          <div id="tk-icon1" class="tk-icon"><svg viewBox="0 0 24 24"><path d="M12,4A4,4 0 0,1 16,8A4,4 0 0,1 12,12A4,4 0 0,1 8,8A4,4 0 0,1 12,4M12,14C16.42,14 20,15.79 20,18V20H4V18C4,15.79 7.58,14 12,14Z"/></svg></div>
+          <div id="tk-icon2" class="tk-icon"><svg viewBox="0 0 24 24"><path d="M19,3H18V1H16V3H8V1H6V3H5C3.89,3 3,3.89 3,5V19A2,2 0 0,0 5,21H19A2,2 0 0,0 21,19V5C21,3.89 20.1,3 19,3M19,19H5V8H19V19M7,10H9V12H7V10M11,10H13V12H11V10M15,10H17V12H15V10M7,14H9V16H7V14M11,14H13V16H11V14Z"/></svg></div>
+          <div id="tk-icon3" class="tk-icon"><svg viewBox="0 0 24 24"><path d="M12,3A4,4 0 0,1 16,7A4,4 0 0,1 12,11A4,4 0 0,1 8,7A4,4 0 0,1 12,3M12,13C16.42,13 20,15.21 20,18V20H4V18C4,15.21 7.58,13 12,13M12,11.5L11,14L12,21L13,14L12,11.5Z"/></svg></div>
+          <div id="tk-icon4" class="tk-icon"><svg viewBox="0 0 24 24"><path d="M20,4H4A2,2 0 0,0 2,6V18A2,2 0 0,0 4,20H20A2,2 0 0,0 22,18V6A2,2 0 0,0 20,4M9,8A2,2 0 0,1 11,10A2,2 0 0,1 9,12A2,2 0 0,1 7,10A2,2 0 0,1 9,8M13,16H5V15C5,13.67 7.67,13 9,13C10.33,13 13,13.67 13,15V16M15,12V11H19V12H15M15,10V9H19V10H15M15,8V7H19V8H15Z"/></svg></div>
+          <!-- Etiquetas e valores -->
+          <div id="tk-label1">NOME DO ASSOCIADO:</div>
+          <div id="tk-label2">SÓCIO DO GPA DESDE:</div>
+          <div id="tk-label3">MEMBRO:</div>
+          <div id="tk-label4">N.º DE ASSOCIADO:</div>
+          <div id="tk-nome"></div>
+          <div id="tk-desde"></div>
+          <div id="tk-membro"></div>
+          <div id="tk-doc"></div>
+          <div id="tk-qrbox"></div>
+        </div><!-- /ticket -->
+        </div><!-- /ticket-scale -->
+      </div>
+      <div class="btn-row" id="ticket-actions" style="display:none;">
+        <button class="btn gold" id="btn-download-card">Baixar carteirinha (imagem)</button>
+        <button class="btn ghost" id="btn-show-qr">Mostrar QR code grande</button>
+      </div>
+
+      <div id="qr-modal" style="display:none; position:fixed; inset:0; background:rgba(0,0,0,0.85); z-index:200; align-items:center; justify-content:center; flex-direction:column; gap:16px;">
+        <div style="background:#fff; padding:24px; border-radius:16px; display:flex; flex-direction:column; align-items:center; gap:12px;">
+          <div id="qr-modal-box"></div>
+          <p style="margin:0; font-size:13px; color:#666; text-align:center;">Aponte a câmera do celular para este QR code</p>
+        </div>
+        <button class="btn danger" id="btn-close-qr">Fechar</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- LEITOR -->
+  <div class="panel" id="panel-leitor">
+    <div class="card">
+      <h2>Leitor de entrada</h2>
+      <p class="hint">Use a câmera ou registre a entrada manualmente digitando o ID do sócio (visível na carteirinha).</p>
+
+      <div style="margin-bottom:16px;">
+        <label>Bipar carteirinha (imagem)</label>
+        <p class="hint" style="margin:4px 0 10px;">Carregue o PNG da carteirinha do sócio para registrar a entrada automaticamente.</p>
+        <label class="filebtn" style="display:inline-block;">
+          Carregar carteirinha (PNG)
+          <input type="file" id="f-scan-img" accept="image/*" style="display:none;">
+        </label>
+        <div id="scan-img-status" style="margin-top:8px;font-size:13px;color:var(--muted);"></div>
+      </div>
+
+      <div style="margin-bottom:16px; border-top:1px solid var(--line); padding-top:16px;">
+        <label for="manual-id">Ou digitar o ID manualmente</label>
+        <div style="display:flex;gap:8px;margin-top:4px;">
+          <input type="text" id="manual-id" placeholder="Cole ou digite o ID do sócio (ex: m_abc123...)" style="flex:1;">
+          <button class="btn gold" id="btn-manual-scan">Registrar</button>
+        </div>
+      </div>
+
+      <details style="margin-bottom:12px;">
+        <summary style="font-size:12px;color:var(--muted);cursor:pointer;user-select:none;">Usar câmera (requer webcam)</summary>
+        <div style="margin-top:12px;">
+          <div class="scan-stage" id="scan-stage">
+            <video id="video" playsinline muted></video>
+            <div class="scan-frame" id="scan-frame" style="display:none;"></div>
+          </div>
+          <canvas id="canvas" style="display:none;"></canvas>
+          <div class="scan-status" id="scan-status">Câmera parada</div>
+          <div class="btn-row" style="justify-content:center;">
+            <button class="btn gold" id="btn-start-cam">Iniciar câmera</button>
+            <button class="btn ghost" id="btn-stop-cam" style="display:none;">Parar câmera</button>
+          </div>
+        </div>
+      </details>
+
+      <div id="result-banner-holder"></div>
+    </div>
+  </div>
+
+  <!-- PRESENÇA -->
+  <div class="panel" id="panel-presenca">
+    <div class="card">
+      <h2>Registro de presença</h2>
+      <div class="picker">
+        <input type="date" id="f-date" style="max-width:200px;">
+        <button class="btn ghost" id="btn-today">Hoje</button>
+      </div>
+      <div id="presenca-stat"></div>
+      <table id="presenca-table">
+        <thead><tr><th>Horário</th><th>Sócio</th></tr></thead>
+        <tbody id="presenca-tbody"></tbody>
+      </table>
+      <div class="empty" id="presenca-empty" style="display:none;">Nenhuma entrada registrada nesta data.</div>
+    </div>
+  </div>
+
+  <div class="footer-reset">
+    <button id="btn-seed">Carregar dados de teste</button>
+    <button id="btn-lock-footer">Sair / Bloquear</button>
+  </div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script>
+(function(){
+  "use strict";
+
+  // =====================================================================
+  // ESCUDO DO CLUBE
+  // =====================================================================
+  const CLUB_LOGO_URL = 'https://upload.wikimedia.org/wikipedia/commons/0/08/Gremio_logo.svg';
+
+
+  // =====================================================================
+  // API — URL base configurável via localStorage
+  // =====================================================================
+  const API_URL_KEY = 'gremio_api_url';
+  let API_BASE = localStorage.getItem(API_URL_KEY) || window.location.origin;
+  let JWT_TOKEN = null; // mantido apenas em memória
+  let USER_ROLE = null; // "admin" | "recepcao"
+
+  function getApiBase(){ return API_BASE.replace(/\/$/, ''); }
+
+  async function apiFetch(path, opts = {}){
+    const headers = { 'Content-Type': 'application/json', ...(opts.headers || {}) };
+    if(JWT_TOKEN) headers['Authorization'] = 'Bearer ' + JWT_TOKEN;
+    const res = await fetch(getApiBase() + path, {
+      ...opts,
+      headers,
+      credentials: 'include',
+    });
+    if(res.status === 401){ doLogout(); return null; }
+    return res;
+  }
+
+  function applyClubLogo(){
+    document.querySelectorAll('.club-logo').forEach(img=>{
+      if(CLUB_LOGO_URL){
+        img.onerror = ()=>{ img.style.display='none'; };
+        img.onload = ()=>{ img.style.display='block'; };
+        img.src = CLUB_LOGO_URL;
+      } else {
+        img.style.display = 'none';
+        img.removeAttribute('src');
+      }
+    });
+    const fallback = document.getElementById('ticket-badge-fallback');
+    if(fallback) fallback.style.display = CLUB_LOGO_URL ? 'none' : 'block';
+  }
+
+  const $ = (id) => document.getElementById(id);
+  function toast(msg){
+    const t = $('toast');
+    t.textContent = msg;
+    t.classList.add('show');
+    clearTimeout(toast._h);
+    toast._h = setTimeout(()=>t.classList.remove('show'), 2400);
+  }
+  function uid(){
+    return 'm_' + Date.now().toString(36) + Math.random().toString(36).slice(2,8);
+  }
+  function todayStr(d){
+    const dt = d || new Date();
+    return dt.getFullYear() + '-' + String(dt.getMonth()+1).padStart(2,'0') + '-' + String(dt.getDate()).padStart(2,'0');
+  }
+  function timeStr(d){
+    const dt = d || new Date();
+    return String(dt.getHours()).padStart(2,'0') + ':' + String(dt.getMinutes()).padStart(2,'0');
+  }
+  function escapeHtml(s){
+    return (s||'').replace(/[&<>"']/g, c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+  }
+
+  // ---------- tabs ----------
+  document.querySelectorAll('.tab').forEach(tab=>{
+    tab.addEventListener('click', ()=>{
+      document.querySelectorAll('.tab').forEach(t=>t.classList.remove('active'));
+      document.querySelectorAll('.panel').forEach(p=>p.classList.remove('active'));
+      tab.classList.add('active');
+      $('panel-' + tab.dataset.tab).classList.add('active');
+      if(tab.dataset.tab === 'carteirinha') renderMemberSelect();
+      if(tab.dataset.tab === 'presenca') renderPresenca();
+      if(tab.dataset.tab !== 'leitor') stopCamera();
+    });
+  });
+
+  // ---------- photo resize ----------
+  let pendingPhoto = '';
+  $('f-foto').addEventListener('change', (e)=>{
+    const file = e.target.files[0];
+    if(!file) return;
+    const img = new Image();
+    const reader = new FileReader();
+    reader.onload = (ev)=>{
+      img.onload = ()=>{
+        const size = 160;
+        const canvas = document.createElement('canvas');
+        canvas.width = size; canvas.height = size;
+        const ctx = canvas.getContext('2d');
+        const s = Math.min(img.width, img.height);
+        const sx = (img.width - s)/2, sy = (img.height - s)/2;
+        ctx.drawImage(img, sx, sy, s, s, 0, 0, size, size);
+        pendingPhoto = canvas.toDataURL('image/jpeg', 0.72);
+        $('f-preview').src = pendingPhoto;
+      };
+      img.src = ev.target.result;
+    };
+    reader.readAsDataURL(file);
+  });
+
+  // ---------- state ----------
+  let members = [];
+  let checkins = [];
+
+  // ---------- API calls ----------
+  async function fetchMembers(){
+    const res = await apiFetch('/api/membros');
+    if(!res || !res.ok) return;
+    members = await res.json();
+    renderMemberList();
+    renderMemberSelect();
+  }
+
+  async function fetchCheckins(date){
+    const res = await apiFetch('/api/checkins?date=' + date);
+    if(!res || !res.ok) return;
+    checkins = await res.json();
+  }
+
+  // ---------- cadastro ----------
+  $('f-username').addEventListener('input', ()=>{
+    const v = $('f-username').value.toLowerCase().replace(/[^a-z0-9_.-]/g,'');
+    $('f-username').value = v;
+    $('url-preview').textContent = v ? `${window.location.origin}/socio/${v}` : '';
+  });
+
+  $('btn-add-member').addEventListener('click', async ()=>{
+    const username = $('f-username').value.trim().toLowerCase();
+    const nome = $('f-nome').value.trim();
+    const doc = $('f-doc').value.trim();
+    if(!username){ toast('Digite o username do sócio'); return; }
+    if(!nome){ toast('Digite o nome do sócio'); return; }
+    if(!/^[a-z0-9_.-]{3,60}$/.test(username)){ toast('Username inválido (mín. 3 caracteres, só letras/números/._-)'); return; }
+
+    const btn = $('btn-add-member');
+    btn.disabled = true; btn.textContent = 'Salvando...';
+
+    const body = { id: uid(), username, nome, doc: doc || null, foto: pendingPhoto || null };
+    const res = await apiFetch('/api/membros', {
+      method: 'POST',
+      body: JSON.stringify(body),
+    });
+    btn.disabled = false; btn.textContent = 'Salvar sócio';
+
+    if(res && res.ok){
+      const novo = await res.json();
+      members.push(novo);
+      const url = `${window.location.origin}/socio/${novo.username}`;
+      toast('Sócio salvo!');
+      $('f-username').value=''; $('f-nome').value=''; $('f-doc').value='';
+      $('f-foto').value=''; $('f-preview').src=''; pendingPhoto='';
+      $('url-preview').textContent='';
+      renderMemberList();
+      // Mostra URL gerada
+      const info = document.createElement('div');
+      info.style.cssText = 'background:#e8f4ff;border:1px solid #b3d4f5;border-radius:8px;padding:12px 14px;font-size:13px;color:#1a3a6e;margin-top:8px;';
+      info.innerHTML = `Carteirinha de <b>${escapeHtml(novo.nome)}</b> disponível em:<br><a href="${url}" target="_blank" style="font-family:monospace;color:#0044CC;word-break:break-all;">${url}</a>`;
+      $('member-list').prepend(info);
+      setTimeout(()=>info.remove(), 15000);
+    } else if(res && res.status === 409){
+      const err = await res.json();
+      toast(err.detail || 'Username já em uso');
+    } else {
+      toast('Erro ao salvar. Tente novamente.');
+    }
+  });
+
+  function renderMemberList(){
+    const wrap = $('member-list');
+    $('member-count-hint').textContent = members.length
+      ? members.length + ' sócio(s) cadastrado(s)'
+      : 'Nenhum sócio cadastrado ainda.';
+    wrap.innerHTML = '';
+    members.slice().reverse().forEach(m=>{
+      const row = document.createElement('div');
+      row.className = 'member-row';
+      row.innerHTML = `
+        <img src="${m.foto || ''}" onerror="this.style.visibility='hidden'">
+        <div class="info"><b>${escapeHtml(m.nome)}</b><span>${escapeHtml(m.doc || 'sem documento')}</span></div>
+        <button data-id="${m.id}">Remover</button>
+      `;
+      row.querySelector('button').addEventListener('click', async ()=>{
+        if(!confirm('Remover ' + m.nome + '?')) return;
+        const res = await apiFetch('/api/membros/' + m.id, { method: 'DELETE' });
+        if(res && res.ok){
+          members = members.filter(x=>x.id!==m.id);
+          renderMemberList();
+          toast('Sócio removido');
+        } else {
+          toast('Erro ao remover');
+        }
+      });
+      wrap.appendChild(row);
+    });
+  }
+
+  // ---------- carteirinha ----------
+  function renderMemberSelect(){
+    const sel = $('sel-member');
+    const current = sel.value;
+    sel.innerHTML = '<option value="">Selecione um sócio...</option>' +
+      members.map(m=>`<option value="${m.id}">${escapeHtml(m.nome)}</option>`).join('');
+    if(current) sel.value = current;
+  }
+  function formatarMesAno(isoStr){
+    if(!isoStr) return '—';
+    const d = new Date(isoStr);
+    const meses = ['Janeiro','Fevereiro','Março','Abril','Maio','Junho','Julho','Agosto','Setembro','Outubro','Novembro','Dezembro'];
+    return meses[d.getMonth()] + ' de ' + d.getFullYear();
+  }
+
+  // Escala o card para caber no container sem quebrar layout
+  function escalarTicket(){
+    const scale = $('ticket-scale');
+    const ticket = $('ticket');
+    if(!scale || !ticket) return;
+    const available = scale.offsetWidth;
+    const ratio = Math.min(1, available / 600);
+    ticket.style.transform = `scale(${ratio})`;
+    scale.style.height = Math.round(377 * ratio) + 'px';
+  }
+  window.addEventListener('resize', escalarTicket);
+
+  function atualizarGestao(){ /* GESTÃO está baked no template PNG — sem ação */ }
+
+  $('sel-member').addEventListener('change', ()=>{
+    const id = $('sel-member').value;
+    if(!id){ $('ticket-wrap').style.display='none'; $('ticket-actions').style.display='none'; return; }
+    const m = members.find(x=>x.id===id);
+    if(!m) return;
+    $('tk-photo').src = m.foto || '/assets/Gremio_logo.svg';
+    $('tk-nome').textContent = m.nome;
+    $('tk-desde').textContent = formatarMesAno(m.socio_gpa_desde || m.criado_em);
+    $('tk-membro').textContent = 'ASSOCIADO';
+    $('tk-doc').textContent = 'GPA ' + String(m.numero || 1).padStart(4, '0');
+    $('tk-qrbox').innerHTML = '';
+    const qrText = location.origin + '/socio/' + m.username;
+    new QRCode($('tk-qrbox'), { text: qrText, width: 100, height: 100, correctLevel: QRCode.CorrectLevel.M });
+    $('ticket-wrap').style.display = 'flex';
+    $('ticket-actions').style.display = 'flex';
+    setTimeout(escalarTicket, 50);
+  });
+
+  $('btn-show-qr').addEventListener('click', ()=>{
+    const id = $('sel-member').value;
+    const m = members.find(x=>x.id===id);
+    if(!m) return;
+    const box = $('qr-modal-box');
+    box.innerHTML = '';
+    new QRCode(box, { text: m.id, width: 260, height: 260, correctLevel: QRCode.CorrectLevel.M });
+    const modal = $('qr-modal');
+    modal.style.display = 'flex';
+  });
+  $('btn-close-qr').addEventListener('click', ()=>{
+    $('qr-modal').style.display = 'none';
+  });
+
+  $('btn-download-card').addEventListener('click', ()=>{
+    const id = $('sel-member').value;
+    const m = members.find(x=>x.id===id);
+    if(!m) return;
+
+    // Gera QR em canvas temporário (maior para qualidade)
+    const qrTmp = document.createElement('div');
+    document.body.appendChild(qrTmp);
+    const qrUrlCard = location.origin + '/socio/' + m.username;
+    new QRCode(qrTmp, { text: qrUrlCard, width: 300, height: 300, correctLevel: QRCode.CorrectLevel.M });
+    const qrCanvas = qrTmp.querySelector('canvas');
+    const qrUrl = qrCanvas ? qrCanvas.toDataURL('image/png') : null;
+    document.body.removeChild(qrTmp);
+
+    // Canvas 2× o card CSS (600×377 → 1200×754)
+    const SC = 2;
+    const W = 600 * SC, H = 377 * SC;
+    const canvas = document.createElement('canvas');
+    canvas.width = W; canvas.height = H;
+    const ctx = canvas.getContext('2d');
+
+    function renderDownload(bgImg, fotoImg, qrImg){
+      // Fundo: template-clean.jpg
+      if(bgImg) ctx.drawImage(bgImg, 0, 0, W, H);
+
+      // Foto do sócio
+      const px=31*SC, py=165.5*SC, pw=129*SC, ph=183.5*SC;
+      if(fotoImg){
+        ctx.save();
+        ctx.beginPath();
+        if(ctx.roundRect) ctx.roundRect(px,py,pw,ph,6); else ctx.rect(px,py,pw,ph);
+        ctx.closePath(); ctx.clip();
+        const isLogo = !m.foto; // sem foto = escudo (object-fit:contain com fundo azul)
+        if(isLogo){
+          ctx.fillStyle='#001C4D'; ctx.fillRect(px,py,pw,ph);
+          const pad=10*SC;
+          const s = Math.min((pw-pad*2)/fotoImg.width, (ph-pad*2)/fotoImg.height);
+          ctx.drawImage(fotoImg, px+pad+(pw-pad*2-fotoImg.width*s)/2, py+pad+(ph-pad*2-fotoImg.height*s)/2, fotoImg.width*s, fotoImg.height*s);
+        } else {
+          const s = Math.max(pw/fotoImg.width, ph/fotoImg.height);
+          ctx.drawImage(fotoImg, px+(pw-fotoImg.width*s)/2, py+(ph-fotoImg.height*s)/2, fotoImg.width*s, fotoImg.height*s);
+        }
+        ctx.restore();
+        // Contorno azul suave
+        ctx.save();
+        ctx.shadowColor='rgba(26,86,196,0.5)'; ctx.shadowBlur=16*SC;
+        ctx.strokeStyle='#1A56C4'; ctx.lineWidth=4;
+        ctx.beginPath();
+        if(ctx.roundRect) ctx.roundRect(px,py,pw,ph,6); else ctx.rect(px,py,pw,ph);
+        ctx.stroke(); ctx.restore();
+      }
+
+      // Campos de texto
+      const campos = [
+        { label:'NOME DO ASSOCIADO:',  valor: m.nome,                                    lt:168, vt:182 },
+        { label:'SÓCIO DO GPA DESDE:', valor: formatarMesAno(m.socio_gpa_desde || m.criado_em), lt:210, vt:223 },
+        { label:'MEMBRO:',             valor: 'ASSOCIADO',                               lt:252, vt:266 },
+        { label:'N.º DE ASSOCIADO:',   valor: 'GPA '+String(m.numero||1).padStart(4,'0'),lt:295, vt:309 },
+      ];
+      ctx.textAlign='left';
+      campos.forEach(c=>{
+        ctx.fillStyle='#7BB8E8';
+        ctx.font=`700 ${9*SC}px "Segoe UI",Arial,sans-serif`;
+        ctx.fillText(c.label, 209*SC, (c.lt+9)*SC);
+        ctx.fillStyle='#FFFFFF';
+        ctx.font=`700 ${13*SC}px "Segoe UI",Arial,sans-serif`;
+        ctx.fillText(c.valor||'—', 209*SC, (c.vt+13)*SC);
+      });
+
+      // QR code (cortando o quiet zone: gera 300×300, exibe 176×176 com crop de 12px proporcionalmente)
+      const qs=88*SC, qx=471*SC, qy=146*SC;
+      if(qrImg){
+        const crop = Math.round(300 * 12/88); // proporção do crop
+        ctx.drawImage(qrImg, crop,crop, 300-crop*2,300-crop*2, qx,qy, qs,qs);
+      }
+
+      const url = canvas.toDataURL('image/png');
+      const a = document.createElement('a');
+      a.href=url; a.download='carteirinha_'+m.nome.replace(/\s+/g,'_')+'.png';
+      a.click();
+    }
+
+    let bgImg=null, fotoImg=null, qrImg=null, pendente=3;
+    function pronto(){ if(--pendente===0) renderDownload(bgImg,fotoImg,qrImg); }
+
+    const bi=new Image(); bi.onload=()=>{bgImg=bi;pronto();}; bi.onerror=pronto;
+    bi.src='/assets/template-clean.jpg';
+
+    const fotoSrc = m.foto || '/assets/Gremio_logo.svg';
+    const fi = new Image(); fi.crossOrigin='anonymous';
+    fi.onload=()=>{fotoImg=fi;pronto();}; fi.onerror=pronto; fi.src=fotoSrc;
+
+    if(qrUrl){ const qi=new Image();
+      qi.onload=()=>{qrImg=qi;pronto();}; qi.onerror=pronto; qi.src=qrUrl;
+    } else { pronto(); }
+
+  });
+
+  // ---------- leitor (scanner) ----------
+  let stream = null;
+  let scanning = false;
+  let lastScanId = null;
+  let lastScanAt = 0;
+
+  $('btn-start-cam').addEventListener('click', startCamera);
+  $('btn-stop-cam').addEventListener('click', stopCamera);
+
+  $('f-scan-img').addEventListener('change', (e)=>{
+    const file = e.target.files[0];
+    if(!file) return;
+    $('scan-img-status').textContent = 'Lendo QR code...';
+    const img = new Image();
+    const reader = new FileReader();
+    reader.onload = (ev)=>{
+      img.onload = ()=>{
+        const canvas = document.createElement('canvas');
+        canvas.width = img.width; canvas.height = img.height;
+        const ctx = canvas.getContext('2d');
+        ctx.drawImage(img, 0, 0);
+        const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
+        const code = jsQR(imageData.data, imageData.width, imageData.height);
+        if(code && code.data){
+          $('scan-img-status').textContent = 'QR code encontrado! Registrando...';
+          handleScan(code.data);
+        } else {
+          $('scan-img-status').textContent = 'QR code não encontrado na imagem.';
+        }
+        $('f-scan-img').value = '';
+      };
+      img.src = ev.target.result;
+    };
+    reader.readAsDataURL(file);
+  });
+
+  $('btn-manual-scan').addEventListener('click', ()=>{
+    const id = $('manual-id').value.trim();
+    if(!id){ toast('Digite o ID do sócio'); return; }
+    handleScan(id);
+    $('manual-id').value = '';
+  });
+  $('manual-id').addEventListener('keydown', (e)=>{
+    if(e.key === 'Enter') $('btn-manual-scan').click();
+  });
+
+  async function startCamera(){
+    try{
+      stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: 'environment' } });
+      const video = $('video');
+      video.srcObject = stream;
+      await video.play();
+      $('scan-frame').style.display='block';
+      $('btn-start-cam').style.display='none';
+      $('btn-stop-cam').style.display='inline-block';
+      $('scan-status').textContent = 'Aponte a câmera para o QR code da carteirinha';
+      scanning = true;
+      requestAnimationFrame(scanLoop);
+    }catch(e){
+      toast('Não foi possível acessar a câmera. Verifique as permissões.');
+    }
+  }
+  function stopCamera(){
+    scanning = false;
+    if(stream){ stream.getTracks().forEach(t=>t.stop()); stream=null; }
+    $('scan-frame').style.display='none';
+    $('btn-start-cam').style.display='inline-block';
+    $('btn-stop-cam').style.display='none';
+    $('scan-status').textContent = 'Câmera parada';
+  }
+
+  let scanBusy = false;
+
+  async function scanLoop(){
+    if(!scanning) return;
+    const video = $('video');
+
+    if(!scanBusy && video.readyState === video.HAVE_ENOUGH_DATA){
+      scanBusy = true;
+      try{
+        if('BarcodeDetector' in window){
+          const detector = new BarcodeDetector({ formats: ['qr_code'] });
+          const codes = await detector.detect(video);
+          if(codes.length > 0) handleScan(codes[0].rawValue);
+        } else {
+          const canvas = $('canvas');
+          canvas.width = video.videoWidth; canvas.height = video.videoHeight;
+          const ctx = canvas.getContext('2d');
+          ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
+          const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
+          const code = jsQR(imageData.data, imageData.width, imageData.height);
+          if(code && code.data) handleScan(code.data);
+        }
+      }catch(e){}
+      scanBusy = false;
+    }
+
+    if(scanning) requestAnimationFrame(scanLoop);
+  }
+
+  function extrairUsername(valor){
+    // QR pode conter URL (/socio/username) ou username direto
+    try {
+      const url = new URL(valor);
+      const m = url.pathname.match(/\/socio\/([^\/]+)/);
+      if(m) return m[1];
+    } catch(e){}
+    return valor; // fallback: trata como username ou id legado
+  }
+
+  async function handleScan(raw){
+    const now = Date.now();
+    if(raw === lastScanId && (now - lastScanAt) < 4000) return;
+    lastScanId = raw; lastScanAt = now;
+
+    const username = extrairUsername(raw);
+    const m = members.find(x => x.username === username || x.id === username);
+    if(!m){
+      showResult('err', null, 'QR code não reconhecido', 'Este código não corresponde a nenhum sócio cadastrado.');
+      return;
+    }
+
+    const body = {
+      membro_id: m.id,
+      date: todayStr(),
+      time: timeStr(),
+      ts: new Date().toISOString(),
+    };
+    const res = await apiFetch('/api/checkins', { method: 'POST', body: JSON.stringify(body) });
+
+    if(!res){ return; }
+    if(res.status === 409){
+      // já entrou hoje — busca o horário do registro anterior
+      await fetchCheckins(todayStr());
+      const anterior = checkins.find(c=>c.membro_id === memberId && c.date === todayStr());
+      showResult('warn', m, 'Presença já registrada hoje', anterior ? 'Entrada às ' + anterior.time + '.' : '');
+      return;
+    }
+    if(!res.ok){
+      showResult('err', m, 'Erro ao registrar', 'Tente bipar novamente.');
+      return;
+    }
+    const entry = await res.json();
+    checkins.push(entry);
+    showResult('ok', m, 'Entrada liberada', 'Registrado às ' + entry.time + '.');
+  }
+
+  function beep(ok){
+    try{
+      const ctx = new (window.AudioContext || window.webkitAudioContext)();
+      const osc = ctx.createOscillator();
+      const gain = ctx.createGain();
+      osc.connect(gain); gain.connect(ctx.destination);
+      osc.frequency.value = ok ? 1046 : 330;
+      osc.type = ok ? 'sine' : 'sawtooth';
+      gain.gain.setValueAtTime(0.3, ctx.currentTime);
+      gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + (ok ? 0.25 : 0.4));
+      osc.start(ctx.currentTime);
+      osc.stop(ctx.currentTime + 0.4);
+    }catch(e){}
+  }
+
+  function showResult(kind, member, title, sub){
+    const holder = $('result-banner-holder');
+    const cls = kind === 'ok' ? 'ok' : (kind === 'warn' ? 'warn' : 'err');
+    const bg  = kind === 'ok' ? '#2F9E64' : (kind === 'warn' ? '#B4801E' : '#C0392B');
+    const icon = kind === 'ok' ? '✓' : (kind === 'warn' ? '!' : '✕');
+
+    beep(kind === 'ok');
+
+    // Flash de tela
+    const flash = document.createElement('div');
+    flash.style.cssText = `position:fixed;inset:0;background:${bg};opacity:0.35;z-index:300;pointer-events:none;transition:opacity .4s;`;
+    document.body.appendChild(flash);
+    setTimeout(()=>{ flash.style.opacity='0'; setTimeout(()=>flash.remove(), 400); }, 200);
+
+    holder.innerHTML = `
+      <div class="result-banner ${cls}" style="margin-top:16px;padding:20px;border-radius:14px;display:flex;gap:14px;align-items:center;border-left:6px solid ${bg};">
+        <div style="width:48px;height:48px;border-radius:50%;background:${bg};color:#fff;display:flex;align-items:center;justify-content:center;font-size:24px;font-weight:900;flex:none;">${icon}</div>
+        ${member && member.foto ? `<img src="${member.foto}" style="width:52px;height:52px;border-radius:50%;object-fit:cover;flex:none;">` : ''}
+        <div class="rb-info">
+          <b style="font-size:16px;">${member ? escapeHtml(member.nome) : ''}</b>
+          <span style="display:block;font-size:13px;margin-top:2px;">${title}${sub ? ' — ' + sub : ''}</span>
+        </div>
+      </div>`;
+  }
+
+  // ---------- presença ----------
+  $('f-date').value = todayStr();
+  $('btn-today').addEventListener('click', ()=>{ $('f-date').value = todayStr(); renderPresenca(); });
+  $('f-date').addEventListener('change', renderPresenca);
+
+  async function renderPresenca(){
+    const date = $('f-date').value || todayStr();
+    await fetchCheckins(date);
+    const rows = checkins.filter(c=>c.date===date).sort((a,b)=>a.time.localeCompare(b.time));
+    const tbody = $('presenca-tbody');
+    tbody.innerHTML = '';
+    $('presenca-stat').innerHTML = rows.length ? `<span class="stat">${rows.length} entrada(s) nesse dia</span>` : '';
+    $('presenca-table').style.display = rows.length ? 'table' : 'none';
+    $('presenca-empty').style.display = rows.length ? 'none' : 'block';
+    rows.forEach(r=>{
+      const tr = document.createElement('tr');
+      tr.innerHTML = `<td class="mono">${r.time}</td><td>${escapeHtml(r.nome)}</td>`;
+      tbody.appendChild(tr);
+    });
+  }
+
+  // ---------- seed de teste ----------
+  function makeAvatar(iniciais, cor){
+    const canvas = document.createElement('canvas');
+    canvas.width = 160; canvas.height = 160;
+    const ctx = canvas.getContext('2d');
+    ctx.fillStyle = cor;
+    ctx.fillRect(0, 0, 160, 160);
+    ctx.fillStyle = '#fff';
+    ctx.font = 'bold 64px Arial';
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'middle';
+    ctx.fillText(iniciais, 80, 80);
+    return canvas.toDataURL('image/jpeg', 0.72);
+  }
+
+  async function seedTestData(){
+    if(!confirm('Adicionar sócios e presenças de teste? Os dados existentes serão mantidos.')) return;
+
+    const socios = [
+      { nome:'Carlos Eduardo Soares',  doc:'123.456.789-00', cor:'#1565C0', ini:'CE' },
+      { nome:'Ana Paula Ferreira',     doc:'987.654.321-00', cor:'#6A1B9A', ini:'AP' },
+      { nome:'Roberto Machado',        doc:'456.789.123-00', cor:'#2E7D32', ini:'RM' },
+      { nome:'Fernanda Lima',          doc:'321.654.987-00', cor:'#C62828', ini:'FL' },
+      { nome:'Gustavo Henrique Dias',  doc:'741.852.963-00', cor:'#E65100', ini:'GH' },
+      { nome:'Mariana Costa',          doc:'',               cor:'#00695C', ini:'MC' },
+      { nome:'Julio Cesar',            doc:'',               cor:'#1A237E', ini:'JC' },
+    ];
+
+    const novos = [];
+    for(const s of socios){
+      const body = { id: uid(), nome: s.nome, doc: s.doc || null, foto: makeAvatar(s.ini, s.cor) };
+      const res = await apiFetch('/api/membros', { method:'POST', body: JSON.stringify(body) });
+      if(res && res.ok) novos.push(await res.json());
+    }
+    members = [...members, ...novos];
+
+    const hoje = todayStr();
+    const ontem = todayStr(new Date(Date.now() - 86400000));
+    const entradas = [
+      { membro_id:novos[0]?.id, date:hoje,  time:'08:15', ts:new Date().toISOString() },
+      { membro_id:novos[1]?.id, date:hoje,  time:'09:32', ts:new Date().toISOString() },
+      { membro_id:novos[2]?.id, date:hoje,  time:'10:05', ts:new Date().toISOString() },
+      { membro_id:novos[0]?.id, date:ontem, time:'14:20', ts:new Date(Date.now()-86400000).toISOString() },
+      { membro_id:novos[3]?.id, date:ontem, time:'16:45', ts:new Date(Date.now()-86400000).toISOString() },
+      { membro_id:novos[4]?.id, date:ontem, time:'11:00', ts:new Date(Date.now()-86400000).toISOString() },
+    ];
+    for(const e of entradas){
+      if(!e.membro_id) continue;
+      await apiFetch('/api/checkins', { method:'POST', body: JSON.stringify(e) });
+    }
+
+    renderMemberList();
+    renderMemberSelect();
+    renderPresenca();
+    toast('Dados de teste adicionados!');
+  }
+
+  $('btn-seed').addEventListener('click', seedTestData);
+
+  // ---------- auth ----------
+  $('btn-login').addEventListener('click', doLogin);
+  $('login-pass').addEventListener('keydown', (e)=>{ if(e.key==='Enter') doLogin(); });
+
+  async function doLogin(){
+    const user = $('login-user').value.trim();
+    const pass = $('login-pass').value;
+    $('login-error').textContent = '';
+    if(!user || !pass){ $('login-error').textContent = 'Preencha usuário e senha.'; return; }
+
+    const btn = $('btn-login');
+    btn.disabled = true; btn.textContent = 'Entrando...';
+
+    try{
+      const res = await fetch(getApiBase() + '/api/auth/login', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        credentials: 'include',
+        body: JSON.stringify({ username: user, password: pass }),
+      });
+      if(res.ok){
+        const data = await res.json();
+        if(data.role === 'socio'){
+          const dest = data.usuario || user;
+          location.href = '/socio/' + dest;
+          return;
+        }
+        if(data.access_token) JWT_TOKEN = data.access_token;
+        USER_ROLE = data.role || 'admin';
+        showApp();
+        applyRoleUI();
+        await fetchMembers();
+        await renderPresenca();
+      } else {
+        $('login-error').textContent = 'Usuário ou senha incorretos.';
+      }
+    }catch(e){
+      $('login-error').textContent = 'Não foi possível conectar à API. Verifique a URL.';
+    }
+
+    btn.disabled = false; btn.textContent = 'Entrar';
+  }
+
+  function applyRoleUI(){
+    const isRecepcao = USER_ROLE === 'recepcao';
+    // Recepção vê todos os tabs mas não pode criar/deletar
+    $('btn-seed').style.display = isRecepcao ? 'none' : '';
+    // Esconde botões de ação admin nos painéis
+    document.querySelectorAll('.admin-only').forEach(el => {
+      el.style.display = isRecepcao ? 'none' : '';
+    });
+  }
+
+  function doLogout(){
+    JWT_TOKEN = null;
+    USER_ROLE = null;
+    stopCamera();
+    $('main-app').style.display = 'none';
+    $('auth-screen').style.display = 'flex';
+    $('login-pass').value = '';
+    $('login-error').textContent = '';
+  }
+
+  $('btn-lock').addEventListener('click', async ()=>{
+    await apiFetch('/api/auth/logout', { method: 'POST' });
+    doLogout();
+  });
+  $('btn-lock-footer').addEventListener('click', async ()=>{
+    await apiFetch('/api/auth/logout', { method: 'POST' });
+    doLogout();
+  });
+
+  // ---------- alterar URL da API ----------
+  $('btn-change-api').addEventListener('click', ()=>{
+    const nova = prompt('URL da API (ex: https://gremio-acesso-backend.onrender.com):', API_BASE);
+    if(nova === null) return;
+    API_BASE = nova.trim().replace(/\/$/, '');
+    localStorage.setItem(API_URL_KEY, API_BASE);
+    $('api-url-display').textContent = API_BASE;
+    toast('URL da API atualizada');
+  });
+
+  function showApp(){
+    $('auth-screen').style.display = 'none';
+    $('main-app').style.display = 'block';
+  }
+
+  // ---------- init ----------
+  (function init(){
+    applyClubLogo();
+    $('api-url-display').textContent = API_BASE;
+    $('auth-screen').style.display = 'flex';
+    $('main-app').style.display = 'none';
+  })();
+
+})();
+</script>
+</body>
+</html>

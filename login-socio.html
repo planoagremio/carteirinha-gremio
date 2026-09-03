@@ -1,0 +1,151 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Acesso do Sócio — Grêmio Plano A</title>
+<style>
+  *{box-sizing:border-box;}
+  html,body{margin:0;padding:0;}
+  body{
+    background:repeating-linear-gradient(135deg,rgba(255,255,255,0.025) 0 26px,rgba(0,0,0,0.05) 26px 52px),#001C4D;
+    font-family:'Segoe UI',Arial,sans-serif;
+    min-height:100vh;
+    display:flex; flex-direction:column; align-items:center; justify-content:center;
+    padding:24px 16px;
+  }
+
+  .brand{ text-align:center; margin-bottom:32px; }
+  .brand img{ width:72px; height:72px; margin-bottom:12px; }
+  .brand h1{ font-size:18px; font-weight:800; text-transform:uppercase; letter-spacing:.05em; margin:0; color:#fff; }
+  .brand p{ font-size:13px; color:#B9C2D6; margin:6px 0 0; }
+
+  .card{
+    background:#fff; border-radius:16px; padding:32px 28px;
+    width:100%; max-width:380px;
+    box-shadow:0 16px 50px rgba(0,0,0,.5);
+  }
+
+  .card h2{ margin:0 0 24px; font-size:16px; color:#001C4D; font-weight:700; text-align:center; }
+
+  label{ display:block; font-size:12px; font-weight:700; color:#444; margin-bottom:4px; text-transform:uppercase; letter-spacing:.04em; }
+
+  input[type=text], input[type=password]{
+    width:100%; padding:11px 14px; border:1.5px solid #ddd; border-radius:8px;
+    font-size:15px; color:#111; outline:none; margin-bottom:18px;
+    transition:border-color .2s;
+  }
+  input:focus{ border-color:#1A56C4; }
+
+  button[type=submit]{
+    width:100%; padding:13px; background:#1A56C4; color:#fff;
+    border:none; border-radius:8px; font-size:15px; font-weight:700;
+    cursor:pointer; transition:background .2s; letter-spacing:.02em;
+  }
+  button[type=submit]:hover{ background:#1445a0; }
+  button[type=submit]:disabled{ background:#aaa; cursor:not-allowed; }
+
+  .erro{
+    background:#fff0f0; border:1px solid #f5c6c6; border-radius:8px;
+    padding:10px 14px; color:#c00; font-size:13px; margin-bottom:16px;
+    display:none;
+  }
+
+  .dica{ font-size:12px; color:#888; text-align:center; margin-top:18px; line-height:1.5; }
+</style>
+</head>
+<body>
+
+<div class="brand">
+  <img src="/assets/Gremio_logo.svg" alt="Grêmio Plano A">
+  <h1>Grêmio Plano A</h1>
+  <p>Acesso à carteirinha digital</p>
+</div>
+
+<div class="card">
+  <h2>Entrar</h2>
+
+  <div id="msg-erro" class="erro"></div>
+
+  <form id="form-login">
+    <label for="username">Usuário</label>
+    <input type="text" id="username" name="username" autocomplete="username" placeholder="seu usuário" required>
+
+    <label for="password">Senha</label>
+    <input type="password" id="password" name="password" autocomplete="current-password" placeholder="••••••••" required>
+
+    <button type="submit" id="btn-entrar">Entrar</button>
+  </form>
+
+  <p class="dica">Primeiro acesso? Use os 3 primeiros e 2 últimos<br>dígitos do seu CPF como senha.</p>
+</div>
+
+<script>
+(function(){
+  function safeRedirect(url, fallback) {
+    try {
+      const parsed = new URL(url, location.origin);
+      if (parsed.origin !== location.origin) return fallback;
+      return parsed.pathname + parsed.search;
+    } catch { return fallback; }
+  }
+
+  // Se já autenticado, redireciona
+  fetch('/api/auth/me', { credentials: 'include' })
+    .then(r => r.ok ? r.json() : null)
+    .then(me => {
+      if(!me) return;
+      const redirect = new URLSearchParams(location.search).get('redirect');
+      if(me.role === 'socio') {
+        location.href = safeRedirect(redirect, '/socio/' + me.usuario);
+      } else {
+        location.href = safeRedirect(redirect, '/');
+      }
+    });
+
+  document.getElementById('form-login').addEventListener('submit', function(e){
+    e.preventDefault();
+    const btn = document.getElementById('btn-entrar');
+    const erro = document.getElementById('msg-erro');
+    erro.style.display = 'none';
+    btn.disabled = true;
+    btn.textContent = 'Entrando...';
+
+    const username = document.getElementById('username').value.trim();
+    const password = document.getElementById('password').value;
+
+    fetch('/api/auth/login', {
+      method: 'POST',
+      headers: {'Content-Type': 'application/json'},
+      credentials: 'include',
+      body: JSON.stringify({ username, password }),
+    })
+    .then(r => r.json().then(d => ({ ok: r.ok, data: d })))
+    .then(({ ok, data }) => {
+      if(!ok) {
+        erro.textContent = data.detail || 'Usuário ou senha incorretos';
+        erro.style.display = 'block';
+        btn.disabled = false;
+        btn.textContent = 'Entrar';
+        return;
+      }
+      const redirect = new URLSearchParams(location.search).get('redirect');
+      if(data.role === 'socio') {
+        location.href = safeRedirect(redirect, '/socio/' + username);
+      } else if(data.role === 'recepcao') {
+        location.href = safeRedirect(redirect, '/');
+      } else {
+        location.href = '/';
+      }
+    })
+    .catch(() => {
+      erro.textContent = 'Erro de conexão. Tente novamente.';
+      erro.style.display = 'block';
+      btn.disabled = false;
+      btn.textContent = 'Entrar';
+    });
+  });
+})();
+</script>
+</body>
+</html>
