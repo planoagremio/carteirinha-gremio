@@ -4,8 +4,7 @@ import time
 import secrets
 import unicodedata
 
-import openpyxl
-from fastapi import APIRouter, Depends, HTTPException, UploadFile, File
+from fastapi import APIRouter, Depends, HTTPException
 from fastapi.encoders import jsonable_encoder
 from fastapi.responses import JSONResponse
 from sqlalchemy import func
@@ -18,7 +17,7 @@ from app.auth import get_usuario_atual, get_qualquer_autenticado, require_admin,
 _import_pwd = CryptContext(schemes=["bcrypt"], deprecated="auto", bcrypt__rounds=4)
 from app.database import get_db, settings
 from app.models import Membro
-from app.schemas import MembroCreate, MembroOut, MembroPublico, FotoInput, ImportarXlsxInput
+from app.schemas import MembroCreate, MembroOut, MembroPublico, FotoInput, ImportarJsonInput
 
 router = APIRouter()
 
@@ -130,115 +129,65 @@ def criar(body: MembroCreate, db: Session = Depends(get_db), _: dict = Depends(r
 
 @router.post("/importar", status_code=201)
 def importar_xlsx(
-    body: ImportarXlsxInput,
+    body: ImportarJsonInput,
     db: Session = Depends(get_db),
     _: dict = Depends(require_admin),
 ):
-    """
-    Importa sócios de uma planilha XLSX enviada como base64 em JSON.
-    Colunas esperadas (na ordem): NOME, Aniversário, IDADE, CIDADE, ESTADO,
-    MATR. GRÊMIO, SÓCIO GRÊMIO DESDE, SÓCIO(A) GPA DESDE, FONE CELULAR, (vazio), e-mail, CPF
-    """
-    import base64 as _b64
-    if not body.filename.lower().endswith(".xlsx"):
-        raise HTTPException(status_code=422, detail="Apenas arquivos .xlsx são aceitos")
-    MAX_XLSX_SIZE = 5 * 1024 * 1024  # 5 MB
-    try:
-        conteudo = _b64.b64decode(body.arquivo_b64)
-    except Exception:
-        raise HTTPException(status_code=422, detail="Arquivo inválido — base64 corrompido")
-    if len(conteudo) > MAX_XLSX_SIZE:
-        raise HTTPException(status_code=413, detail="Arquivo muito grande (máx. 5 MB)")
-    if not conteudo.startswith(b"PK\x03\x04"):
-        raise HTTPException(status_code=422, detail="Arquivo inválido — envie um .xlsx válido")
-    try:
-        wb = openpyxl.load_workbook(io.BytesIO(conteudo), data_only=True)
-    except Exception:
-        raise HTTPException(status_code=422, detail="Arquivo inválido — envie um .xlsx válido")
+    """Importa sócios a partir de dados pré-parseados pelo frontend (SheetJS)."""
+    import datetime as dt
 
-    ws = wb.active
-    rows = list(ws.iter_rows(values_only=True))
-    if not rows:
-        raise HTTPException(status_code=422, detail="Planilha vazia")
-
-    # Pula cabeçalho (linha 1)
     criados = []
     erros = []
 
-    for idx, row in enumerate(rows[1:], start=2):
-        if not any(row):
-            continue
-
-        nome        = str(row[0]).strip() if row[0] else None
-        aniversario = str(row[1]).strip() if row[1] else None
-        cidade      = str(row[3]).strip() if row[3] else None
-        estado      = str(row[4]).strip() if row[4] else None
-        matricula   = str(row[5]).strip() if row[5] else None
-        gpa_desde   = row[7]  # datetime ou string
-        fone        = str(row[8]).strip() if row[8] else None
-        email       = str(row[10]).strip() if row[10] else None
-        cpf_raw     = row[11]
-
+    for idx, item in enumerate(body.membros, start=2):
+        nome = (item.nome or "").strip()
         if not nome:
             erros.append({"linha": idx, "erro": "Nome vazio"})
             continue
 
-        cpf_digits = _so_digitos(str(cpf_raw)) if cpf_raw else ""
+        cpf_digits = _so_digitos(item.cpf or "")
         if cpf_digits and len(cpf_digits) != 11:
-            erros.append({"linha": idx, "nome": nome, "erro": f"CPF inválido: {cpf_raw}"})
+            erros.append({"linha": idx, "nome": nome, "erro": f"CPF inválido: {item.cpf}"})
             cpf_digits = ""
 
-        # Verifica CPF duplicado
         if cpf_digits and db.query(Membro).filter(Membro.cpf == cpf_digits).first():
             erros.append({"linha": idx, "nome": nome, "erro": "CPF já cadastrado"})
             continue
 
         doc_formatado = _formatar_cpf(cpf_digits) if cpf_digits else None
         senha_plain   = _senha_do_cpf(cpf_digits) if cpf_digits else secrets.token_hex(4)
-        senha_hash    = _import_pwd.hash(senha_plain)  # rounds=4 para não travar no bulk
+        senha_hash    = _import_pwd.hash(senha_plain)
 
-        # Normaliza data sócio GPA
-        import datetime as dt
         socio_desde = None
-        if gpa_desde:
-            if isinstance(gpa_desde, (dt.datetime, dt.date)):
-                socio_desde = gpa_desde if isinstance(gpa_desde, dt.datetime) else dt.datetime(gpa_desde.year, gpa_desde.month, gpa_desde.day)
-            else:
-                try:
-                    socio_desde = dt.datetime.strptime(str(gpa_desde).strip()[:10], "%Y-%m-%d")
-                except ValueError:
-                    pass
+        if item.gpa_desde:
+            try:
+                socio_desde = dt.datetime.strptime(item.gpa_desde[:10], "%Y-%m-%d")
+            except ValueError:
+                pass
 
         username = _gerar_username(nome, db)
-        novo_id  = _gerar_id()
-
         membro = Membro(
-            id=novo_id,
+            id=_gerar_id(),
             username=username,
             nome=nome,
             doc=doc_formatado,
             cpf=cpf_digits or None,
             senha_hash=senha_hash,
-            email=email,
-            fone=fone,
-            matricula_gremio=matricula,
+            email=item.email,
+            fone=item.fone,
+            matricula_gremio=item.matricula,
             socio_gpa_desde=socio_desde,
-            aniversario=aniversario,
-            cidade=cidade,
-            estado=estado,
-            ativo=False,  # Admin precisa validar
+            aniversario=item.aniversario,
+            cidade=item.cidade,
+            estado=item.estado,
+            ativo=False,
         )
         db.add(membro)
         try:
             db.flush()
-            criados.append({
-                "username": username,
-                "nome": nome,
-            })
+            criados.append({"username": username, "nome": nome})
         except Exception as e:
             db.rollback()
-            import logging
-            logging.getLogger(__name__).error("Importação linha %d (%s): %s", idx, nome, e)
             erros.append({"linha": idx, "nome": nome, "erro": "Erro ao salvar — verifique dados duplicados"})
             continue
 

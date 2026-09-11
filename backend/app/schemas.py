@@ -127,6 +127,16 @@ class LoginInput(BaseModel):
     password: str
 
 
-class ImportarXlsxInput(BaseModel):
-    arquivo_b64: str   # conteúdo do .xlsx em base64
-    filename: str = "planilha.xlsx"
+class MembroImportItem(BaseModel):
+    nome: str
+    aniversario: str | None = None
+    cidade: str | None = None
+    estado: str | None = None
+    matricula: str | None = None
+    gpa_desde: str | None = None
+    fone: str | None = None
+    email: str | None = None
+    cpf: str | None = None
+
+class ImportarJsonInput(BaseModel):
+    membros: list[MembroImportItem]

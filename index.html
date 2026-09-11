@@ -5,7 +5,8 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Acesso do Sócio</title>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
-<script src="https://cdnjs.cloudflare.com/ajax/libs/jsQR/1.4.0/jsQR.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/jsqr@1.4.0/dist/jsQR.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
 <style>
   :root{
     --navy:#001C4D;
@@ -1105,22 +1106,40 @@
     $('import-result').innerHTML = '';
 
     try{
-      const base64 = await new Promise((resolve, reject) => {
-        const reader = new FileReader();
-        reader.onload = (ev) => resolve(ev.target.result.split(',')[1]);
-        reader.onerror = () => reject(new Error('Falha ao ler o arquivo'));
-        reader.readAsDataURL(file);
-      });
+      // Parsear XLSX no browser com SheetJS — manda só os dados, não o arquivo
+      const arrayBuffer = await file.arrayBuffer();
+      const wb = XLSX.read(arrayBuffer, { type: 'array', cellDates: true });
+      const ws = wb.Sheets[wb.SheetNames[0]];
+      const rows = XLSX.utils.sheet_to_json(ws, { header: 1, defval: null });
 
-      const url = window.location.origin + '/api/membros/importar';
-      const headers = { 'Content-Type': 'application/json' };
-      if(JWT_TOKEN) headers['Authorization'] = 'Bearer ' + JWT_TOKEN;
+      if(rows.length < 2){
+        $('import-result').innerHTML = `<div style="background:#fae4e1;border-radius:8px;padding:12px 14px;color:#6b1a1a;">Planilha vazia ou sem dados.</div>`;
+        btn.disabled = false; btn.textContent = 'Importar sócios';
+        return;
+      }
 
-      const res = await fetch(url, {
+      // Monta array de membros conforme colunas esperadas
+      const membros = rows.slice(1).filter(r => r.some(c => c !== null)).map(r => ({
+        nome:        r[0]  ? String(r[0]).trim()  : null,
+        aniversario: r[1]  ? String(r[1]).trim()  : null,
+        cidade:      r[3]  ? String(r[3]).trim()  : null,
+        estado:      r[4]  ? String(r[4]).trim()  : null,
+        matricula:   r[5]  ? String(r[5]).trim()  : null,
+        gpa_desde:   r[7]  ? (r[7] instanceof Date ? r[7].toISOString().slice(0,10) : String(r[7]).trim()) : null,
+        fone:        r[8]  ? String(r[8]).trim()  : null,
+        email:       r[10] ? String(r[10]).trim() : null,
+        cpf:         r[11] ? String(r[11]).trim() : null,
+      })).filter(m => m.nome);
+
+      if(membros.length === 0){
+        $('import-result').innerHTML = `<div style="background:#fae4e1;border-radius:8px;padding:12px 14px;color:#6b1a1a;">Nenhum sócio encontrado na planilha.</div>`;
+        btn.disabled = false; btn.textContent = 'Importar sócios';
+        return;
+      }
+
+      const res = await apiFetch('/api/membros/importar', {
         method: 'POST',
-        headers,
-        credentials: 'include',
-        body: JSON.stringify({ arquivo_b64: base64, filename: file.name }),
+        body: JSON.stringify({ membros }),
       });
 
       let data;
