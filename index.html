@@ -469,19 +469,11 @@
 
 
   // =====================================================================
-  // API — URL base configurável via localStorage
+  // API — sempre usa a mesma origem da página
   // =====================================================================
   const API_URL_KEY = 'gremio_api_url';
-  (function(){
-    const _stored = localStorage.getItem(API_URL_KEY);
-    if(_stored){
-      const pageProto = window.location.protocol; // "https:" ou "http:"
-      const sameOrigin = _stored === window.location.origin;
-      const sameProto  = _stored.startsWith(pageProto);
-      if(!sameOrigin || !sameProto) localStorage.removeItem(API_URL_KEY);
-    }
-  })();
-  let API_BASE = localStorage.getItem(API_URL_KEY) || window.location.origin;
+  localStorage.removeItem(API_URL_KEY);
+  let API_BASE = window.location.origin;
   let JWT_TOKEN = null; // mantido apenas em memória
   let USER_ROLE = null; // "admin" | "recepcao"
 
