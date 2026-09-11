@@ -217,7 +217,7 @@ def remover(membro_id: str, db: Session = Depends(get_db), _: dict = Depends(req
 
 
 @router.post("/minha-foto")
-def atualizar_minha_foto(body: FotoInput, usuario: dict = Depends(get_usuario_atual), db: Session = Depends(get_db)):
+def atualizar_minha_foto(body: FotoInput, usuario: dict = Depends(get_qualquer_autenticado), db: Session = Depends(get_db)):
     """Sócio atualiza a própria foto."""
     if usuario.get("role") != "socio":
         raise HTTPException(status_code=403, detail="Apenas sócios podem usar este endpoint")
