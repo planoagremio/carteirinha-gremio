@@ -474,9 +474,11 @@
   const API_URL_KEY = 'gremio_api_url';
   (function(){
     const _stored = localStorage.getItem(API_URL_KEY);
-    if(_stored && _stored !== window.location.origin){
-      // URL salva difere da origem atual — limpa para evitar bloqueio por CSP
-      localStorage.removeItem(API_URL_KEY);
+    if(_stored){
+      const pageProto = window.location.protocol; // "https:" ou "http:"
+      const sameOrigin = _stored === window.location.origin;
+      const sameProto  = _stored.startsWith(pageProto);
+      if(!sameOrigin || !sameProto) localStorage.removeItem(API_URL_KEY);
     }
   })();
   let API_BASE = localStorage.getItem(API_URL_KEY) || window.location.origin;
