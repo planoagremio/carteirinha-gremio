@@ -83,6 +83,7 @@
 <script>
 (function(){
   function safeRedirect(url, fallback) {
+    if(!url) return fallback;
     try {
       const parsed = new URL(url, location.origin);
       if (parsed.origin !== location.origin) return fallback;
