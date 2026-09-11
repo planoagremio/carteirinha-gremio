@@ -125,3 +125,8 @@ class TrocarSenhaInput(BaseModel):
 class LoginInput(BaseModel):
     username: str
     password: str
+
+
+class ImportarXlsxInput(BaseModel):
+    arquivo_b64: str   # conteúdo do .xlsx em base64
+    filename: str = "planilha.xlsx"

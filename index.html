@@ -1110,18 +1110,18 @@
     btn.disabled = true; btn.textContent = 'Importando...';
     $('import-result').innerHTML = '';
 
-    const form = new FormData();
-    form.append('arquivo', file);
+    // Lê o arquivo como base64 e envia como JSON (evita problemas com multipart no Railway)
+    const base64 = await new Promise((resolve, reject) => {
+      const reader = new FileReader();
+      reader.onload = (e) => resolve(e.target.result.split(',')[1]);
+      reader.onerror = reject;
+      reader.readAsDataURL(file);
+    });
 
     try{
-      // Usa URL relativa para garantir mesma origem (evita bloqueio CORS/CSP)
-      const fetchHeaders = {};
-      if(JWT_TOKEN) fetchHeaders['Authorization'] = 'Bearer ' + JWT_TOKEN;
-      const res = await fetch('/api/membros/importar', {
+      const res = await apiFetch('/api/membros/importar', {
         method: 'POST',
-        headers: fetchHeaders,
-        credentials: 'include',
-        body: form,
+        body: JSON.stringify({ arquivo_b64: base64, filename: file.name }),
       });
 
       let data;
