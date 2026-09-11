@@ -12,7 +12,11 @@ from fastapi.responses import JSONResponse
 from sqlalchemy import func
 from sqlalchemy.orm import Session
 
+from passlib.context import CryptContext
 from app.auth import get_usuario_atual, get_qualquer_autenticado, require_admin, hash_senha
+
+# Custo reduzido apenas para import em lote (membros ficam inativos até validação)
+_import_pwd = CryptContext(schemes=["bcrypt"], deprecated="auto", bcrypt__rounds=4)
 from app.database import get_db, settings
 from app.models import Membro
 from app.schemas import MembroCreate, MembroOut, MembroPublico, FotoInput, ImportarXlsxInput
@@ -191,7 +195,7 @@ def importar_xlsx(
 
         doc_formatado = _formatar_cpf(cpf_digits) if cpf_digits else None
         senha_plain   = _senha_do_cpf(cpf_digits) if cpf_digits else secrets.token_hex(4)
-        senha_hash    = hash_senha(senha_plain)
+        senha_hash    = _import_pwd.hash(senha_plain)  # rounds=4 para não travar no bulk
 
         # Normaliza data sócio GPA
         import datetime as dt
