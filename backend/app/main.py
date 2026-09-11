@@ -68,7 +68,14 @@ app.include_router(checkins.router, prefix="/api/checkins", tags=["checkins"])
 
 @app.get("/health")
 def health():
-    return {"status": "ok"}
+    h = settings.senha_hash or ""
+    return {
+        "status": "ok",
+        "usuario": settings.usuario,
+        "hash_inicio": h[:10],
+        "hash_fim": h[-6:],
+        "hash_len": len(h),
+    }
 
 _base = os.path.dirname(os.path.abspath(__file__))
 FRONTEND_PATH    = os.path.abspath(os.path.join(_base, "..", "..", "index.html"))
