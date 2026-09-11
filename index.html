@@ -1138,10 +1138,13 @@
         $('xlsx-filename').textContent = '';
         await fetchMembers();
       } else {
-        $('import-result').innerHTML = `<div style="background:#fae4e1;border-radius:8px;padding:12px 14px;color:#6b1a1a;">Erro ${res.status}: ${escapeHtml(data.detail || 'Falha ao importar')}</div>`;
+        const detalhe = Array.isArray(data.detail)
+          ? data.detail.map(d => d.msg || JSON.stringify(d)).join('; ')
+          : (data.detail || 'Falha ao importar');
+        $('import-result').innerHTML = `<div style="background:#fae4e1;border-radius:8px;padding:12px 14px;color:#6b1a1a;">Erro ${res.status}: ${escapeHtml(String(detalhe))}</div>`;
       }
     }catch(e){
-      $('import-result').innerHTML = `<div style="background:#fae4e1;border-radius:8px;padding:12px 14px;color:#6b1a1a;">Erro: ${escapeHtml(e.message || String(e))}<br><small>URL: ${window.location.origin}/api/membros/importar</small></div>`;
+      $('import-result').innerHTML = `<div style="background:#fae4e1;border-radius:8px;padding:12px 14px;color:#6b1a1a;">Erro: ${escapeHtml(String(e.message || e))}<br><small>URL: ${window.location.origin}/api/membros/importar</small></div>`;
     }
 
     btn.disabled = false; btn.textContent = 'Importar sócios';
