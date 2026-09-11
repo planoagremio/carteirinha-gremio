@@ -5,6 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Carteirinha do Sócio</title>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
 <style>
   *{box-sizing:border-box;}
   html,body{margin:0;padding:0;}
@@ -156,11 +157,14 @@
   </div><!-- /ticket -->
   </div><!-- /ticket-scale -->
 
-  <button class="btn-qr" id="btn-mostrar-qr">Mostrar QR Code</button>
+  <div style="display:flex;gap:10px;width:100%;max-width:600px;margin-top:16px;">
+    <button class="btn-qr" id="btn-mostrar-qr" style="flex:1;margin-top:0;">Mostrar QR Code</button>
+    <button class="btn-qr" id="btn-baixar" style="flex:1;margin-top:0;background:#0e7a3f;">Baixar carteirinha</button>
+  </div>
 
   <div class="qr-grande" id="qr-grande" style="display:none;">
     <div id="qr-grande-box"></div>
-    <p>Apresente este QR code na entrada do clube</p>
+    <p>Apresente este QR code na entrada da sede</p>
   </div>
 
   <div class="senha-box">
@@ -278,6 +282,31 @@
       document.title = m.nome + ' — Carteirinha';
       setTimeout(escalarTicket, 50);
 
+      // Download carteirinha
+      document.getElementById('btn-baixar').addEventListener('click', async function(){
+        if(typeof html2canvas === 'undefined'){ alert('Aguarde o carregamento da página.'); return; }
+        const btn = this;
+        btn.disabled = true;
+        btn.textContent = 'Gerando...';
+        const scale = document.getElementById('ticket-scale');
+        const ticket = document.getElementById('ticket');
+        const savedT = ticket.style.transform;
+        const savedH = scale.style.height;
+        ticket.style.transform = 'scale(1)';
+        scale.style.height = '377px';
+        try {
+          const canvas = await html2canvas(ticket, { scale: 2, useCORS: true, logging: false });
+          const a = document.createElement('a');
+          a.download = (m.nome || 'carteirinha').replace(/\s+/g, '-') + '-gpa.png';
+          a.href = canvas.toDataURL('image/png');
+          a.click();
+        } catch(e) { console.error('Erro ao gerar carteirinha:', e); }
+        ticket.style.transform = savedT;
+        scale.style.height = savedH;
+        btn.disabled = false;
+        btn.textContent = 'Baixar carteirinha';
+      });
+
       // Troca de senha
       document.getElementById('btn-trocar-senha').addEventListener('click', async function(){
         const atual = document.getElementById('senha-atual').value;
@@ -335,6 +364,7 @@
             pendingFoto = canvas.toDataURL('image/jpeg', 0.82);
             fotoPreview.src = pendingFoto;
             fotoPreview.style.visibility = 'visible';
+            document.getElementById('tk-foto').src = pendingFoto;
             btnSalvarFoto.disabled = false;
           };
           img.src = ev.target.result;
