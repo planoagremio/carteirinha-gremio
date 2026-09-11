@@ -1123,7 +1123,8 @@
         body: form,
       });
 
-      const data = await res.json();
+      let data;
+      try{ data = await res.json(); } catch(e){ data = {}; }
 
       if(res.ok){
         let html = `<div style="background:#e4f5ec;border-radius:8px;padding:12px 14px;color:#1a4a2e;">
@@ -1141,10 +1142,10 @@
         $('xlsx-filename').textContent = '';
         await fetchMembers();
       } else {
-        $('import-result').innerHTML = `<div style="background:#fae4e1;border-radius:8px;padding:12px 14px;color:#6b1a1a;">${escapeHtml(data.detail || 'Erro ao importar')}</div>`;
+        $('import-result').innerHTML = `<div style="background:#fae4e1;border-radius:8px;padding:12px 14px;color:#6b1a1a;">Erro ${res.status}: ${escapeHtml(data.detail || 'Falha ao importar')}</div>`;
       }
     }catch(e){
-      $('import-result').innerHTML = `<div style="background:#fae4e1;border-radius:8px;padding:12px 14px;color:#6b1a1a;">Erro de conexão. Tente novamente.</div>`;
+      $('import-result').innerHTML = `<div style="background:#fae4e1;border-radius:8px;padding:12px 14px;color:#6b1a1a;">Erro de conexão: ${escapeHtml(e.message || String(e))}</div>`;
     }
 
     btn.disabled = false; btn.textContent = 'Importar sócios';
