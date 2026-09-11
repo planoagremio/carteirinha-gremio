@@ -1113,13 +1113,13 @@
     const form = new FormData();
     form.append('arquivo', file);
 
-    const headers = {};
-    if(JWT_TOKEN) headers['Authorization'] = 'Bearer ' + JWT_TOKEN;
-
     try{
-      const res = await fetch(getApiBase() + '/api/membros/importar', {
+      // Usa URL relativa para garantir mesma origem (evita bloqueio CORS/CSP)
+      const fetchHeaders = {};
+      if(JWT_TOKEN) fetchHeaders['Authorization'] = 'Bearer ' + JWT_TOKEN;
+      const res = await fetch('/api/membros/importar', {
         method: 'POST',
-        headers,
+        headers: fetchHeaders,
         credentials: 'include',
         body: form,
       });

@@ -135,10 +135,15 @@ def importar_xlsx(
     Colunas esperadas (na ordem): NOME, Aniversário, IDADE, CIDADE, ESTADO,
     MATR. GRÊMIO, SÓCIO GRÊMIO DESDE, SÓCIO(A) GPA DESDE, FONE CELULAR, (vazio), e-mail, CPF
     """
+    if not (arquivo.filename or "").lower().endswith(".xlsx"):
+        raise HTTPException(status_code=422, detail="Apenas arquivos .xlsx são aceitos")
     MAX_XLSX_SIZE = 5 * 1024 * 1024  # 5 MB
     conteudo = arquivo.file.read(MAX_XLSX_SIZE + 1)
     if len(conteudo) > MAX_XLSX_SIZE:
         raise HTTPException(status_code=413, detail="Arquivo muito grande (máx. 5 MB)")
+    # Valida assinatura do arquivo (magic bytes do ZIP/XLSX: PK\x03\x04)
+    if not conteudo.startswith(b"PK\x03\x04"):
+        raise HTTPException(status_code=422, detail="Arquivo inválido — envie um .xlsx válido")
     try:
         wb = openpyxl.load_workbook(io.BytesIO(conteudo), data_only=True)
     except Exception:
