@@ -31,7 +31,7 @@ class SecurityHeadersMiddleware(BaseHTTPMiddleware):
             "default-src 'self'; "
             "script-src 'self' cdnjs.cloudflare.com cdn.jsdelivr.net 'unsafe-inline'; "
             "style-src 'self' 'unsafe-inline'; "
-            "img-src 'self' data: blob:; "
+            "img-src 'self' data: blob: https://upload.wikimedia.org; "
             "font-src 'self'; "
             "connect-src 'self'; "
             "frame-ancestors 'none';"
