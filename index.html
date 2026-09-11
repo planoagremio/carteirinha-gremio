@@ -1105,24 +1105,18 @@
     $('import-result').innerHTML = '';
 
     try{
-      // Lê o arquivo como base64
-      const base64 = await new Promise((resolve, reject) => {
-        const reader = new FileReader();
-        reader.onload = (ev) => resolve(ev.target.result.split(',')[1]);
-        reader.onerror = () => reject(new Error('Falha ao ler o arquivo'));
-        reader.readAsDataURL(file);
-      });
+      const form = new FormData();
+      form.append('arquivo', file);
 
-      // Envia como JSON para a mesma origem da página
       const url = window.location.origin + '/api/membros/importar';
-      const headers = { 'Content-Type': 'application/json' };
+      const headers = {};
       if(JWT_TOKEN) headers['Authorization'] = 'Bearer ' + JWT_TOKEN;
 
       const res = await fetch(url, {
         method: 'POST',
         headers,
         credentials: 'include',
-        body: JSON.stringify({ arquivo_b64: base64, filename: file.name }),
+        body: form,
       });
 
       let data;

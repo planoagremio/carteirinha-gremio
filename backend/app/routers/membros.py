@@ -1,4 +1,3 @@
-import base64
 import io
 import re
 import time
@@ -19,7 +18,7 @@ from app.auth import get_usuario_atual, get_qualquer_autenticado, require_admin,
 _import_pwd = CryptContext(schemes=["bcrypt"], deprecated="auto", bcrypt__rounds=4)
 from app.database import get_db, settings
 from app.models import Membro
-from app.schemas import MembroCreate, MembroOut, MembroPublico, FotoInput, ImportarXlsxInput
+from app.schemas import MembroCreate, MembroOut, MembroPublico, FotoInput
 
 router = APIRouter()
 
@@ -131,22 +130,19 @@ def criar(body: MembroCreate, db: Session = Depends(get_db), _: dict = Depends(r
 
 @router.post("/importar", status_code=201)
 def importar_xlsx(
-    body: ImportarXlsxInput,
+    arquivo: UploadFile = File(...),
     db: Session = Depends(get_db),
     _: dict = Depends(require_admin),
 ):
     """
-    Importa sócios de uma planilha XLSX enviada como base64 em JSON.
+    Importa sócios de uma planilha XLSX.
     Colunas esperadas (na ordem): NOME, Aniversário, IDADE, CIDADE, ESTADO,
     MATR. GRÊMIO, SÓCIO GRÊMIO DESDE, SÓCIO(A) GPA DESDE, FONE CELULAR, (vazio), e-mail, CPF
     """
-    if not body.filename.lower().endswith(".xlsx"):
+    if not (arquivo.filename or "").lower().endswith(".xlsx"):
         raise HTTPException(status_code=422, detail="Apenas arquivos .xlsx são aceitos")
     MAX_XLSX_SIZE = 5 * 1024 * 1024  # 5 MB
-    try:
-        conteudo = base64.b64decode(body.arquivo_b64)
-    except Exception:
-        raise HTTPException(status_code=422, detail="Arquivo inválido — base64 corrompido")
+    conteudo = arquivo.file.read(MAX_XLSX_SIZE + 1)
     if len(conteudo) > MAX_XLSX_SIZE:
         raise HTTPException(status_code=413, detail="Arquivo muito grande (máx. 5 MB)")
     if not conteudo.startswith(b"PK\x03\x04"):
