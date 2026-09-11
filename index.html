@@ -572,7 +572,7 @@
 
   // ---------- API calls ----------
   async function fetchMembers(){
-    const res = await apiFetch('/api/membros');
+    const res = await apiFetch('/api/membros/');
     if(!res || !res.ok) return;
     members = await res.json();
     renderMemberList();
@@ -580,7 +580,7 @@
   }
 
   async function fetchCheckins(date){
-    const res = await apiFetch('/api/checkins?date=' + date);
+    const res = await apiFetch('/api/checkins/?date=' + date);
     if(!res || !res.ok) return;
     checkins = await res.json();
   }
@@ -1136,34 +1136,44 @@
         return;
       }
 
-      const res = await apiFetch('/api/membros/importar', {
-        method: 'POST',
-        body: JSON.stringify({ membros }),
-      });
+      // Envia em lotes de 50 para não estourar o proxy
+      const LOTE = 50;
+      let totalCriados = 0, totalErros = 0, todosErros = [];
+      for(let i = 0; i < membros.length; i += LOTE){
+        const lote = membros.slice(i, i + LOTE);
+        const res = await apiFetch('/api/membros/importar', {
+          method: 'POST',
+          body: JSON.stringify({ membros: lote }),
+        });
+        if(!res){ throw new Error('Sem resposta do servidor'); }
+        let data;
+        try{ data = await res.json(); } catch(_){ data = {}; }
+        if(!res.ok){
+          const detalhe = Array.isArray(data.detail)
+            ? data.detail.map(d => d.msg || JSON.stringify(d)).join('; ')
+            : (data.detail || 'Falha ao importar');
+          throw new Error(`Erro ${res.status}: ${String(detalhe)}`);
+        }
+        totalCriados += data.criados || 0;
+        totalErros   += data.erros   || 0;
+        todosErros    = todosErros.concat(data.detalhes_erros || []);
+      }
 
-      let data;
-      try{ data = await res.json(); } catch(_){ data = {}; }
-
-      if(res.ok){
+      if(true){
         let html = `<div style="background:#e4f5ec;border-radius:8px;padding:12px 14px;color:#1a4a2e;">
           <b>Importação concluída!</b><br>
-          ${data.criados} sócio(s) criado(s)${data.erros > 0 ? `, ${data.erros} erro(s)` : ''}.
+          ${totalCriados} sócio(s) criado(s)${totalErros > 0 ? `, ${totalErros} erro(s)` : ''}.
           <br><small style="color:#555;">Os sócios importados ficam inativos até você validá-los na lista abaixo.</small>
         </div>`;
-        if(data.detalhes_erros && data.detalhes_erros.length){
-          html += `<details style="margin-top:8px;font-size:12px;"><summary style="cursor:pointer;color:var(--muted);">Ver erros (${data.detalhes_erros.length})</summary><ul style="margin:6px 0 0;padding-left:18px;">` +
-            data.detalhes_erros.map(e=>`<li>Linha ${e.linha}${e.nome ? ' — ' + escapeHtml(e.nome) : ''}: ${escapeHtml(e.erro)}</li>`).join('') +
+        if(todosErros.length){
+          html += `<details style="margin-top:8px;font-size:12px;"><summary style="cursor:pointer;color:var(--muted);">Ver erros (${todosErros.length})</summary><ul style="margin:6px 0 0;padding-left:18px;">` +
+            todosErros.map(e=>`<li>Linha ${e.linha}${e.nome ? ' — ' + escapeHtml(e.nome) : ''}: ${escapeHtml(String(e.erro))}</li>`).join('') +
             '</ul></details>';
         }
         $('import-result').innerHTML = html;
         $('f-xlsx').value = '';
         $('xlsx-filename').textContent = '';
         await fetchMembers();
-      } else {
-        const detalhe = Array.isArray(data.detail)
-          ? data.detail.map(d => d.msg || JSON.stringify(d)).join('; ')
-          : (data.detail || 'Falha ao importar');
-        $('import-result').innerHTML = `<div style="background:#fae4e1;border-radius:8px;padding:12px 14px;color:#6b1a1a;">Erro ${res.status}: ${escapeHtml(String(detalhe))}</div>`;
       }
     }catch(e){
       $('import-result').innerHTML = `<div style="background:#fae4e1;border-radius:8px;padding:12px 14px;color:#6b1a1a;">Erro: ${escapeHtml(String(e.message || e))}<br><small>URL: ${window.location.origin}/api/membros/importar</small></div>`;
