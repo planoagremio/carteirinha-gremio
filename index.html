@@ -1104,22 +1104,29 @@
     btn.disabled = true; btn.textContent = 'Importando...';
     $('import-result').innerHTML = '';
 
-    // Lê o arquivo como base64 e envia como JSON (evita problemas com multipart no Railway)
-    const base64 = await new Promise((resolve, reject) => {
-      const reader = new FileReader();
-      reader.onload = (e) => resolve(e.target.result.split(',')[1]);
-      reader.onerror = reject;
-      reader.readAsDataURL(file);
-    });
-
     try{
-      const res = await apiFetch('/api/membros/importar', {
+      // Lê o arquivo como base64
+      const base64 = await new Promise((resolve, reject) => {
+        const reader = new FileReader();
+        reader.onload = (ev) => resolve(ev.target.result.split(',')[1]);
+        reader.onerror = () => reject(new Error('Falha ao ler o arquivo'));
+        reader.readAsDataURL(file);
+      });
+
+      // Envia como JSON para a mesma origem da página
+      const url = window.location.origin + '/api/membros/importar';
+      const headers = { 'Content-Type': 'application/json' };
+      if(JWT_TOKEN) headers['Authorization'] = 'Bearer ' + JWT_TOKEN;
+
+      const res = await fetch(url, {
         method: 'POST',
+        headers,
+        credentials: 'include',
         body: JSON.stringify({ arquivo_b64: base64, filename: file.name }),
       });
 
       let data;
-      try{ data = await res.json(); } catch(e){ data = {}; }
+      try{ data = await res.json(); } catch(_){ data = {}; }
 
       if(res.ok){
         let html = `<div style="background:#e4f5ec;border-radius:8px;padding:12px 14px;color:#1a4a2e;">
@@ -1140,7 +1147,7 @@
         $('import-result').innerHTML = `<div style="background:#fae4e1;border-radius:8px;padding:12px 14px;color:#6b1a1a;">Erro ${res.status}: ${escapeHtml(data.detail || 'Falha ao importar')}</div>`;
       }
     }catch(e){
-      $('import-result').innerHTML = `<div style="background:#fae4e1;border-radius:8px;padding:12px 14px;color:#6b1a1a;">Erro de conexão: ${escapeHtml(e.message || String(e))}</div>`;
+      $('import-result').innerHTML = `<div style="background:#fae4e1;border-radius:8px;padding:12px 14px;color:#6b1a1a;">Erro: ${escapeHtml(e.message || String(e))}<br><small>URL: ${window.location.origin}/api/membros/importar</small></div>`;
     }
 
     btn.disabled = false; btn.textContent = 'Importar sócios';
