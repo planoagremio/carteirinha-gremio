@@ -180,7 +180,7 @@ def importar_xlsx(
             aniversario=item.aniversario,
             cidade=item.cidade,
             estado=item.estado,
-            ativo=False,
+            ativo=True,
         )
         db.add(membro)
         try:

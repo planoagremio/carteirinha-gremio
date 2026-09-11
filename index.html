@@ -642,12 +642,27 @@
     members.slice().reverse().forEach(m=>{
       const row = document.createElement('div');
       row.className = 'member-row';
+      const ativoLabel = m.ativo
+        ? '<span style="color:#2F9E64;font-size:11px;font-weight:700;">✓ Ativo</span>'
+        : '<span style="color:#B4801E;font-size:11px;font-weight:700;">Inativo</span>';
+      const validarLabel = m.ativo ? 'Desativar' : 'Ativar';
       row.innerHTML = `
         <img src="${m.foto || ''}" onerror="this.style.visibility='hidden'">
-        <div class="info"><b>${escapeHtml(m.nome)}</b><span>${escapeHtml(m.doc || 'sem documento')}</span></div>
-        <button data-id="${m.id}">Remover</button>
+        <div class="info"><b>${escapeHtml(m.nome)}</b><span>${escapeHtml(m.doc || 'sem documento')} ${ativoLabel}</span></div>
+        <button class="btn-validar" data-id="${m.id}" style="background:none;border:none;color:${m.ativo ? '#B4801E' : '#2F9E64'};font-size:12px;cursor:pointer;font-weight:700;">${validarLabel}</button>
+        <button class="btn-remover" data-id="${m.id}" style="background:none;border:none;color:var(--danger);font-size:12px;cursor:pointer;font-weight:700;">Remover</button>
       `;
-      row.querySelector('button').addEventListener('click', async ()=>{
+      row.querySelector('.btn-validar').addEventListener('click', async ()=>{
+        const res = await apiFetch('/api/membros/' + m.id + '/validar', { method: 'PATCH' });
+        if(res && res.ok){
+          m.ativo = !m.ativo;
+          renderMemberList();
+          toast(m.ativo ? m.nome + ' ativado!' : m.nome + ' desativado');
+        } else {
+          toast('Erro ao atualizar');
+        }
+      });
+      row.querySelector('.btn-remover').addEventListener('click', async ()=>{
         if(!confirm('Remover ' + m.nome + '?')) return;
         const res = await apiFetch('/api/membros/' + m.id, { method: 'DELETE' });
         if(res && res.ok){
