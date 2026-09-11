@@ -51,14 +51,14 @@ def login(body: LoginInput, request: Request, response: Response, db: Session = 
     membro_id: str | None = None
 
     # 1. Verifica admin
-    if settings.usuario and body.username == settings.usuario and verificar_senha(body.password, settings.senha_hash):
+    if settings.usuario and body.username == settings.usuario.strip() and verificar_senha(body.password, settings.senha_hash.strip()):
         role = "admin"
 
     # 2. Verifica recepção
     elif (
         settings.usuario_recepcao
-        and body.username == settings.usuario_recepcao
-        and verificar_senha(body.password, settings.senha_hash_recepcao)
+        and body.username == settings.usuario_recepcao.strip()
+        and verificar_senha(body.password, settings.senha_hash_recepcao.strip())
     ):
         role = "recepcao"
 
