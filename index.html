@@ -288,10 +288,10 @@
 
   <div class="tabs">
     <button class="tab active" data-tab="cadastro">Cadastro</button>
+    <a href="/scanner" class="tab" style="text-decoration:none;">&#128247; Scanner</a>
     <button class="tab" data-tab="carteirinha">Carteirinha</button>
     <button class="tab" data-tab="leitor">Leitor</button>
     <button class="tab" data-tab="presenca">Presença</button>
-    <a href="/scanner" class="tab" style="text-decoration:none;">&#128247; Scanner</a>
   </div>
 
   <!-- CADASTRO -->
@@ -321,6 +321,19 @@
       <div class="btn-row">
         <button class="btn gold" id="btn-add-member">Salvar sócio</button>
       </div>
+    </div>
+
+    <div class="card admin-only">
+      <h2>Importar planilha XLSX</h2>
+      <p class="hint">Envie o arquivo XLSX com a lista de sócios. Colunas esperadas: NOME, Aniversário, IDADE, CIDADE, ESTADO, MATR. GRÊMIO, SÓCIO GRÊMIO DESDE, SÓCIO(A) GPA DESDE, FONE CELULAR, (vazio), e-mail, CPF.</p>
+      <label class="filebtn" id="xlsx-label">Escolher arquivo .xlsx
+        <input type="file" id="f-xlsx" accept=".xlsx">
+      </label>
+      <span id="xlsx-filename" style="margin-left:10px;font-size:13px;color:var(--muted);"></span>
+      <div class="btn-row">
+        <button class="btn gold" id="btn-importar" disabled>Importar sócios</button>
+      </div>
+      <div id="import-result" style="margin-top:14px;font-size:13.5px;"></div>
     </div>
 
     <div class="card">
@@ -1079,6 +1092,63 @@
   }
 
   $('btn-seed').addEventListener('click', seedTestData);
+
+  // ---------- importar xlsx ----------
+  $('f-xlsx').addEventListener('change', (e)=>{
+    const file = e.target.files[0];
+    $('xlsx-filename').textContent = file ? file.name : '';
+    $('btn-importar').disabled = !file;
+    $('import-result').innerHTML = '';
+  });
+
+  $('btn-importar').addEventListener('click', async ()=>{
+    const file = $('f-xlsx').files[0];
+    if(!file) return;
+
+    const btn = $('btn-importar');
+    btn.disabled = true; btn.textContent = 'Importando...';
+    $('import-result').innerHTML = '';
+
+    const form = new FormData();
+    form.append('arquivo', file);
+
+    const headers = {};
+    if(JWT_TOKEN) headers['Authorization'] = 'Bearer ' + JWT_TOKEN;
+
+    try{
+      const res = await fetch(getApiBase() + '/api/membros/importar', {
+        method: 'POST',
+        headers,
+        credentials: 'include',
+        body: form,
+      });
+
+      const data = await res.json();
+
+      if(res.ok){
+        let html = `<div style="background:#e4f5ec;border-radius:8px;padding:12px 14px;color:#1a4a2e;">
+          <b>Importação concluída!</b><br>
+          ${data.criados} sócio(s) criado(s)${data.erros > 0 ? `, ${data.erros} erro(s)` : ''}.
+          <br><small style="color:#555;">Os sócios importados ficam inativos até você validá-los na lista abaixo.</small>
+        </div>`;
+        if(data.detalhes_erros && data.detalhes_erros.length){
+          html += `<details style="margin-top:8px;font-size:12px;"><summary style="cursor:pointer;color:var(--muted);">Ver erros (${data.detalhes_erros.length})</summary><ul style="margin:6px 0 0;padding-left:18px;">` +
+            data.detalhes_erros.map(e=>`<li>Linha ${e.linha}${e.nome ? ' — ' + escapeHtml(e.nome) : ''}: ${escapeHtml(e.erro)}</li>`).join('') +
+            '</ul></details>';
+        }
+        $('import-result').innerHTML = html;
+        $('f-xlsx').value = '';
+        $('xlsx-filename').textContent = '';
+        await fetchMembers();
+      } else {
+        $('import-result').innerHTML = `<div style="background:#fae4e1;border-radius:8px;padding:12px 14px;color:#6b1a1a;">${escapeHtml(data.detail || 'Erro ao importar')}</div>`;
+      }
+    }catch(e){
+      $('import-result').innerHTML = `<div style="background:#fae4e1;border-radius:8px;padding:12px 14px;color:#6b1a1a;">Erro de conexão. Tente novamente.</div>`;
+    }
+
+    btn.disabled = false; btn.textContent = 'Importar sócios';
+  });
 
   // ---------- auth ----------
   $('btn-login').addEventListener('click', doLogin);
