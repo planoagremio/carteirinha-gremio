@@ -482,7 +482,7 @@
   async function apiFetch(path, opts = {}){
     const headers = { 'Content-Type': 'application/json', ...(opts.headers || {}) };
     if(JWT_TOKEN) headers['Authorization'] = 'Bearer ' + JWT_TOKEN;
-    const res = await fetch(getApiBase() + path, {
+    const res = await fetch(window.location.origin + path, {
       ...opts,
       headers,
       credentials: 'include',
