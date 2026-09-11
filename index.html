@@ -473,13 +473,11 @@
   // =====================================================================
   // API — sempre usa a mesma origem da página
   // =====================================================================
-  const API_URL_KEY = 'gremio_api_url';
-  localStorage.removeItem(API_URL_KEY);
-  let API_BASE = window.location.origin;
-  let JWT_TOKEN = null; // mantido apenas em memória
-  let USER_ROLE = null; // "admin" | "recepcao"
+  let JWT_TOKEN = null;
+  let USER_ROLE = null;
+  localStorage.removeItem('gremio_api_url');
 
-  function getApiBase(){ return API_BASE.replace(/\/$/, ''); }
+  function getApiBase(){ return window.location.origin; }
 
   async function apiFetch(path, opts = {}){
     const headers = { 'Content-Type': 'application/json', ...(opts.headers || {}) };
@@ -1246,15 +1244,6 @@
     doLogout();
   });
 
-  // ---------- alterar URL da API ----------
-  $('btn-change-api').addEventListener('click', ()=>{
-    const nova = prompt('URL da API (ex: https://gremio-acesso-backend.onrender.com):', API_BASE);
-    if(nova === null) return;
-    API_BASE = nova.trim().replace(/\/$/, '');
-    localStorage.setItem(API_URL_KEY, API_BASE);
-    $('api-url-display').textContent = API_BASE;
-    toast('URL da API atualizada');
-  });
 
   function showApp(){
     $('auth-screen').style.display = 'none';
@@ -1264,7 +1253,6 @@
   // ---------- init ----------
   (function init(){
     applyClubLogo();
-    $('api-url-display').textContent = API_BASE;
     $('auth-screen').style.display = 'flex';
     $('main-app').style.display = 'none';
   })();
