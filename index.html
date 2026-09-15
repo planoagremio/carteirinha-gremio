@@ -334,6 +334,7 @@
       <span id="xlsx-filename" style="margin-left:10px;font-size:13px;color:var(--muted);"></span>
       <div class="btn-row">
         <button class="btn gold" id="btn-importar" disabled>Importar sócios</button>
+        <button class="btn ghost" id="btn-limpar-dup">Remover duplicatas por CPF</button>
       </div>
       <div id="import-result" style="margin-top:14px;font-size:13.5px;"></div>
     </div>
@@ -1227,6 +1228,22 @@
     }
 
     btn.disabled = false; btn.textContent = 'Importar sócios';
+  });
+
+  // ---------- remover duplicatas ----------
+  $('btn-limpar-dup').addEventListener('click', async ()=>{
+    if(!confirm('Remover duplicatas por CPF?\n\nPara cada CPF repetido, mantém o registro com mais dados preenchidos e apaga os demais.')) return;
+    const btn = $('btn-limpar-dup');
+    btn.disabled = true; btn.textContent = 'Removendo...';
+    const res = await apiFetch('/api/membros/limpar-duplicatas', { method: 'POST' });
+    btn.disabled = false; btn.textContent = 'Remover duplicatas por CPF';
+    if(res && res.ok){
+      const data = await res.json();
+      $('import-result').innerHTML = `<div style="background:#e8f5e9;border-radius:8px;padding:12px 14px;color:#1b5e20;">${data.removidos} registro(s) duplicado(s) removido(s).</div>`;
+      await loadMembers();
+    } else {
+      $('import-result').innerHTML = `<div style="background:#fae4e1;border-radius:8px;padding:12px 14px;color:#6b1a1a;">Erro ao remover duplicatas.</div>`;
+    }
   });
 
   // ---------- auth ----------

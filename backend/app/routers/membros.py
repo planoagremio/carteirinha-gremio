@@ -138,6 +138,7 @@ def importar_xlsx(
     import datetime as dt
 
     criados = []
+    atualizados = []
     erros = []
 
     for idx, item in enumerate(body.membros, start=2):
@@ -151,13 +152,7 @@ def importar_xlsx(
             erros.append({"linha": idx, "nome": nome, "erro": f"CPF inválido: {item.cpf}"})
             cpf_digits = ""
 
-        if cpf_digits and db.query(Membro).filter(Membro.cpf == cpf_digits).first():
-            erros.append({"linha": idx, "nome": nome, "erro": "CPF já cadastrado"})
-            continue
-
         doc_formatado = _formatar_cpf(cpf_digits) if cpf_digits else None
-        senha_plain   = _senha_do_cpf(cpf_digits) if cpf_digits else secrets.token_hex(4)
-        senha_hash    = _import_pwd.hash(senha_plain)
 
         socio_desde = None
         if item.gpa_desde:
@@ -166,7 +161,32 @@ def importar_xlsx(
             except ValueError:
                 pass
 
-        username = _gerar_username(nome, db)
+        # Tenta localizar membro existente: primeiro por CPF, depois por nome exato
+        existente = None
+        if cpf_digits:
+            existente = db.query(Membro).filter(Membro.cpf == cpf_digits).first()
+        if not existente:
+            existente = db.query(Membro).filter(Membro.nome == nome).first()
+
+        if existente:
+            # Atualiza dados cadastrais, preserva senha e username
+            existente.nome = nome
+            existente.doc = doc_formatado
+            existente.cpf = cpf_digits or existente.cpf
+            existente.email = item.email or existente.email
+            existente.fone = item.fone or existente.fone
+            existente.matricula_gremio = item.matricula or existente.matricula_gremio
+            existente.socio_gpa_desde = socio_desde or existente.socio_gpa_desde
+            existente.aniversario = item.aniversario or existente.aniversario
+            existente.cidade = item.cidade or existente.cidade
+            existente.estado = item.estado or existente.estado
+            atualizados.append({"username": existente.username, "nome": nome})
+            continue
+
+        # Novo membro
+        senha_plain = _senha_do_cpf(cpf_digits) if cpf_digits else secrets.token_hex(4)
+        senha_hash  = _import_pwd.hash(senha_plain)
+        username    = _gerar_username(nome, db)
         membro = Membro(
             id=_gerar_id(),
             username=username,
@@ -187,13 +207,51 @@ def importar_xlsx(
         try:
             db.flush()
             criados.append({"username": username, "nome": nome})
-        except Exception as e:
+        except Exception:
             db.rollback()
             erros.append({"linha": idx, "nome": nome, "erro": "Erro ao salvar — verifique dados duplicados"})
             continue
 
     db.commit()
-    return {"criados": len(criados), "erros": len(erros), "socios": criados, "detalhes_erros": erros}
+    return {
+        "criados": len(criados),
+        "atualizados": len(atualizados),
+        "erros": len(erros),
+        "socios": criados,
+        "detalhes_erros": erros,
+    }
+
+
+@router.post("/limpar-duplicatas")
+def limpar_duplicatas(db: Session = Depends(get_db), _: dict = Depends(require_admin)):
+    """Remove duplicatas de CPF, mantendo o registro com mais dados preenchidos."""
+    from sqlalchemy import func as sqlfunc
+
+    # CPFs que aparecem mais de uma vez
+    cpfs_duplicados = (
+        db.query(Membro.cpf)
+        .filter(Membro.cpf.isnot(None))
+        .group_by(Membro.cpf)
+        .having(sqlfunc.count(Membro.id) > 1)
+        .all()
+    )
+
+    removidos = 0
+    for (cpf,) in cpfs_duplicados:
+        membros = db.query(Membro).filter(Membro.cpf == cpf).all()
+
+        def _score(m: Membro) -> int:
+            campos = [m.foto, m.email, m.fone, m.aniversario, m.cidade, m.estado,
+                      m.matricula_gremio, m.socio_gpa_desde]
+            return sum(1 for c in campos if c is not None)
+
+        membros.sort(key=_score, reverse=True)
+        for duplicata in membros[1:]:
+            db.delete(duplicata)
+            removidos += 1
+
+    db.commit()
+    return {"removidos": removidos}
 
 
 @router.patch("/{membro_id}/validar")
@@ -271,6 +329,9 @@ def publico(
 
     dados = MembroPublico.model_validate(membro)
     dados.doc = _mascarar_doc(dados.doc)
-    dados.numero = db.query(func.count(Membro.id)).filter(Membro.criado_em <= membro.criado_em).scalar() or 1
+    if membro.matricula_gremio and membro.matricula_gremio.strip().isdigit():
+        dados.numero = int(membro.matricula_gremio.strip())
+    else:
+        dados.numero = db.query(func.count(Membro.id)).filter(Membro.id <= membro.id).scalar() or 1
     dados.presidente = settings.presidente_gpa
     return dados
