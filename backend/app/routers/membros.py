@@ -180,17 +180,24 @@ def importar_xlsx(
 
         if existente:
             # Atualiza dados cadastrais, preserva senha e username
-            existente.nome = nome
-            existente.doc = doc_formatado
-            existente.cpf = cpf_digits or existente.cpf
-            existente.email = item.email or existente.email
-            existente.fone = item.fone or existente.fone
-            existente.matricula_gremio = item.matricula or existente.matricula_gremio
-            existente.socio_gpa_desde = socio_desde or existente.socio_gpa_desde
-            existente.aniversario = item.aniversario or existente.aniversario
-            existente.cidade = item.cidade or existente.cidade
-            existente.estado = item.estado or existente.estado
-            atualizados.append({"username": existente.username, "nome": nome})
+            try:
+                sp = db.begin_nested()
+                existente.nome = nome
+                existente.doc = doc_formatado
+                existente.cpf = cpf_digits or existente.cpf
+                existente.email = item.email or existente.email
+                existente.fone = item.fone or existente.fone
+                existente.matricula_gremio = item.matricula or existente.matricula_gremio
+                existente.socio_gpa_desde = socio_desde or existente.socio_gpa_desde
+                existente.aniversario = item.aniversario or existente.aniversario
+                existente.cidade = item.cidade or existente.cidade
+                existente.estado = item.estado or existente.estado
+                db.flush()
+                sp.commit()
+                atualizados.append({"username": existente.username, "nome": nome})
+            except Exception:
+                sp.rollback()
+                erros.append({"linha": idx, "nome": nome, "erro": "Erro ao atualizar — verifique dados duplicados"})
             continue
 
         # Novo membro
@@ -215,10 +222,12 @@ def importar_xlsx(
         )
         db.add(membro)
         try:
+            sp = db.begin_nested()
             db.flush()
+            sp.commit()
             criados.append({"username": username, "nome": nome})
         except Exception:
-            db.rollback()
+            sp.rollback()
             erros.append({"linha": idx, "nome": nome, "erro": "Erro ao salvar — verifique dados duplicados"})
             continue
 
