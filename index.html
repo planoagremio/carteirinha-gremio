@@ -381,6 +381,19 @@
         <button class="btn ghost" id="btn-show-qr">Mostrar QR code grande</button>
       </div>
 
+      <div id="senha-modal" style="display:none; position:fixed; inset:0; background:rgba(0,0,0,0.75); z-index:200; align-items:center; justify-content:center;">
+        <div style="background:#fff; padding:28px 24px; border-radius:16px; width:100%; max-width:340px; display:flex; flex-direction:column; gap:14px;">
+          <p style="margin:0; font-weight:700; font-size:15px; color:#1a2340;" id="senha-modal-titulo">Redefinir senha</p>
+          <input type="password" id="senha-modal-input" placeholder="Nova senha" autocomplete="new-password"
+            style="border:1px solid #c8d0e0; border-radius:8px; padding:10px 12px; font-size:14px; outline:none; width:100%; box-sizing:border-box;">
+          <p id="senha-modal-erro" style="margin:0; color:#c0392b; font-size:12px; display:none;"></p>
+          <div style="display:flex; gap:10px; justify-content:flex-end;">
+            <button id="senha-modal-cancelar" class="btn ghost" style="font-size:13px; padding:8px 16px;">Cancelar</button>
+            <button id="senha-modal-confirmar" class="btn gold" style="font-size:13px; padding:8px 16px;">Salvar</button>
+          </div>
+        </div>
+      </div>
+
       <div id="qr-modal" style="display:none; position:fixed; inset:0; background:rgba(0,0,0,0.85); z-index:200; align-items:center; justify-content:center; flex-direction:column; gap:16px;">
         <div style="background:#fff; padding:24px; border-radius:16px; display:flex; flex-direction:column; align-items:center; gap:12px;">
           <div id="qr-modal-box"></div>
@@ -650,6 +663,7 @@
         <img src="${m.foto || ''}" onerror="this.style.visibility='hidden'">
         <div class="info"><b>${escapeHtml(m.nome)}</b><span>${escapeHtml(m.doc || 'sem documento')} ${ativoLabel}</span></div>
         <button class="btn-validar" data-id="${m.id}" style="background:none;border:none;color:${m.ativo ? '#B4801E' : '#2F9E64'};font-size:12px;cursor:pointer;font-weight:700;">${validarLabel}</button>
+        <button class="btn-senha" data-id="${m.id}" style="background:none;border:none;color:#5B7FBF;font-size:12px;cursor:pointer;font-weight:700;">Resetar Senha</button>
         <button class="btn-remover" data-id="${m.id}" style="background:none;border:none;color:var(--danger);font-size:12px;cursor:pointer;font-weight:700;">Remover</button>
       `;
       row.querySelector('.btn-validar').addEventListener('click', async ()=>{
@@ -661,6 +675,37 @@
         } else {
           toast('Erro ao atualizar');
         }
+      });
+      row.querySelector('.btn-senha').addEventListener('click', ()=>{
+        const modal = $('senha-modal');
+        const input = $('senha-modal-input');
+        const erro  = $('senha-modal-erro');
+        $('senha-modal-titulo').textContent = 'Redefinir senha — ' + m.nome;
+        input.value = '';
+        erro.style.display = 'none';
+        modal.style.display = 'flex';
+        input.focus();
+
+        const fechar = () => { modal.style.display = 'none'; };
+
+        $('senha-modal-cancelar').onclick = fechar;
+        modal.onclick = (e) => { if(e.target === modal) fechar(); };
+
+        $('senha-modal-confirmar').onclick = async () => {
+          const nova = input.value;
+          if(nova.length < 3){
+            erro.textContent = 'Senha muito curta (mínimo 3 caracteres)';
+            erro.style.display = 'block';
+            input.focus();
+            return;
+          }
+          const res = await apiFetch('/api/membros/' + m.id + '/senha', { method: 'PATCH', body: JSON.stringify({ senha: nova }) });
+          fechar();
+          if(res && res.ok){ toast('Senha de ' + m.nome + ' redefinida!'); }
+          else { toast('Erro ao redefinir senha'); }
+        };
+
+        input.onkeydown = (e) => { if(e.key === 'Enter') $('senha-modal-confirmar').click(); };
       });
       row.querySelector('.btn-remover').addEventListener('click', async ()=>{
         if(!confirm('Remover ' + m.nome + '?')) return;

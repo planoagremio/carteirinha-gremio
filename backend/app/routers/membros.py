@@ -11,6 +11,7 @@ from sqlalchemy import func
 from sqlalchemy.orm import Session
 
 from passlib.context import CryptContext
+from pydantic import BaseModel
 from app.auth import get_usuario_atual, get_qualquer_autenticado, require_admin, hash_senha
 
 # Custo reduzido apenas para import em lote (membros ficam inativos até validação)
@@ -204,6 +205,23 @@ def validar(membro_id: str, db: Session = Depends(get_db), _: dict = Depends(req
     membro.ativo = not membro.ativo
     db.commit()
     return {"id": membro_id, "ativo": membro.ativo}
+
+
+class SenhaInput(BaseModel):
+    senha: str
+
+
+@router.patch("/{membro_id}/senha")
+def resetar_senha(membro_id: str, body: SenhaInput, db: Session = Depends(get_db), _: dict = Depends(require_admin)):
+    """Admin define uma nova senha para o sócio."""
+    if not body.senha or len(body.senha) < 3:
+        raise HTTPException(status_code=422, detail="Senha muito curta (mínimo 3 caracteres)")
+    membro = db.get(Membro, membro_id)
+    if not membro:
+        raise HTTPException(status_code=404, detail="Sócio não encontrado")
+    membro.senha_hash = hash_senha(body.senha)
+    db.commit()
+    return {"ok": True}
 
 
 @router.delete("/{membro_id}")
