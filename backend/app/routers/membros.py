@@ -224,10 +224,18 @@ def importar_xlsx(
 
 @router.post("/limpar-duplicatas")
 def limpar_duplicatas(db: Session = Depends(get_db), _: dict = Depends(require_admin)):
-    """Remove duplicatas de CPF, mantendo o registro com mais dados preenchidos."""
+    """Remove duplicatas por CPF e por nome, mantendo o registro com mais dados preenchidos."""
     from sqlalchemy import func as sqlfunc
 
-    # CPFs que aparecem mais de uma vez
+    def _score(m: Membro) -> int:
+        campos = [m.foto, m.email, m.fone, m.aniversario, m.cidade, m.estado,
+                  m.matricula_gremio, m.socio_gpa_desde, m.cpf]
+        return sum(1 for c in campos if c is not None)
+
+    ids_removidos: set[str] = set()
+    removidos = 0
+
+    # 1. Duplicatas por CPF
     cpfs_duplicados = (
         db.query(Membro.cpf)
         .filter(Membro.cpf.isnot(None))
@@ -235,20 +243,37 @@ def limpar_duplicatas(db: Session = Depends(get_db), _: dict = Depends(require_a
         .having(sqlfunc.count(Membro.id) > 1)
         .all()
     )
-
-    removidos = 0
     for (cpf,) in cpfs_duplicados:
         membros = db.query(Membro).filter(Membro.cpf == cpf).all()
-
-        def _score(m: Membro) -> int:
-            campos = [m.foto, m.email, m.fone, m.aniversario, m.cidade, m.estado,
-                      m.matricula_gremio, m.socio_gpa_desde]
-            return sum(1 for c in campos if c is not None)
-
         membros.sort(key=_score, reverse=True)
         for duplicata in membros[1:]:
-            db.delete(duplicata)
-            removidos += 1
+            if duplicata.id not in ids_removidos:
+                ids_removidos.add(duplicata.id)
+                db.delete(duplicata)
+                removidos += 1
+
+    # 2. Duplicatas por nome (case-insensitive)
+    nomes_duplicados = (
+        db.query(sqlfunc.lower(Membro.nome))
+        .group_by(sqlfunc.lower(Membro.nome))
+        .having(sqlfunc.count(Membro.id) > 1)
+        .all()
+    )
+    for (nome_lower,) in nomes_duplicados:
+        membros = (
+            db.query(Membro)
+            .filter(sqlfunc.lower(Membro.nome) == nome_lower)
+            .filter(Membro.id.notin_(ids_removidos))
+            .all()
+        )
+        if len(membros) <= 1:
+            continue
+        membros.sort(key=_score, reverse=True)
+        for duplicata in membros[1:]:
+            if duplicata.id not in ids_removidos:
+                ids_removidos.add(duplicata.id)
+                db.delete(duplicata)
+                removidos += 1
 
     db.commit()
     return {"removidos": removidos}
