@@ -373,9 +373,19 @@ def publico(
 
     dados = MembroPublico.model_validate(membro)
     dados.doc = _mascarar_doc(dados.doc)
-    if membro.matricula_gremio and membro.matricula_gremio.strip().isdigit():
-        dados.numero = int(membro.matricula_gremio.strip())
-    else:
-        dados.numero = db.query(func.count(Membro.id)).filter(Membro.id <= membro.id).scalar() or 1
+
+    # Número GPA: posição na ordenação por socio_gpa_desde ASC, desempate por nome ASC.
+    # Sócios sem data vão para o final. Numeração começa em 02 (01 é reservado).
+    todos = (
+        db.query(Membro.id, Membro.socio_gpa_desde, Membro.nome)
+        .order_by(
+            Membro.socio_gpa_desde.asc().nulls_last(),
+            Membro.nome.asc(),
+        )
+        .all()
+    )
+    posicao = next((i for i, row in enumerate(todos) if row[0] == membro.id), 0)
+    dados.numero = posicao + 2  # +2 porque começa no 02
+
     dados.presidente = settings.presidente_gpa
     return dados
