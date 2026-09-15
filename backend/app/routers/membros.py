@@ -161,12 +161,22 @@ def importar_xlsx(
             except ValueError:
                 pass
 
-        # Tenta localizar membro existente: primeiro por CPF, depois por nome exato
+        # Tenta localizar membro existente: CPF > nome exato > primeiro+último nome
         existente = None
         if cpf_digits:
             existente = db.query(Membro).filter(Membro.cpf == cpf_digits).first()
         if not existente:
             existente = db.query(Membro).filter(Membro.nome == nome).first()
+        if not existente:
+            partes = _remover_acentos(nome.lower()).split()
+            if len(partes) >= 2:
+                primeiro, ultimo = partes[0], partes[-1]
+                candidatos = db.query(Membro).filter(Membro.cpf.is_(None)).all()
+                for c in candidatos:
+                    p = _remover_acentos(c.nome.lower()).split()
+                    if len(p) >= 2 and p[0] == primeiro and p[-1] == ultimo:
+                        existente = c
+                        break
 
         if existente:
             # Atualiza dados cadastrais, preserva senha e username
