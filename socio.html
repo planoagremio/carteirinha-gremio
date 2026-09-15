@@ -244,7 +244,7 @@
       document.getElementById('tk-nome').textContent = m.nome;
       document.getElementById('tk-desde').textContent = formatarMesAno(m.socio_gpa_desde || m.criado_em);
       document.getElementById('tk-membro').textContent = 'ASSOCIADO';
-      document.getElementById('tk-doc').textContent = 'GPA ' + String(m.numero || 1).padStart(4, '0');
+      document.getElementById('tk-doc').textContent = 'GPA ' + String(m.numero || 2).padStart(4, '0');
 
       const qrText = location.origin + '/socio/' + m.username;
 

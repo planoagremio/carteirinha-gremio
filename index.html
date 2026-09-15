@@ -748,7 +748,7 @@
     $('tk-nome').textContent = m.nome;
     $('tk-desde').textContent = formatarMesAno(m.socio_gpa_desde || m.criado_em);
     $('tk-membro').textContent = 'ASSOCIADO';
-    $('tk-doc').textContent = 'GPA ' + String(m.numero || 1).padStart(4, '0');
+    $('tk-doc').textContent = 'GPA ' + String(m.numero || 2).padStart(4, '0');
     $('tk-qrbox').innerHTML = '';
     const qrText = location.origin + '/socio/' + m.username;
     new QRCode($('tk-qrbox'), { text: qrText, width: 100, height: 100, correctLevel: QRCode.CorrectLevel.M });
